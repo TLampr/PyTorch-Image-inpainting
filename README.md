@@ -8,4 +8,6 @@ __Todo :__
 * Tasos :sunglasses: : Dataset + Architecture
 * Manon :sunglasses: : :sleeping: :sleeping: :sleeping:
 
+__ A lovely VNet :__
+
 ![picture alt](https://github.com/MathiasGruber/PConv-Keras/raw/master/data/images/architecture.png)
