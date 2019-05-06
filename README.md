@@ -6,5 +6,5 @@ __Todo :__
 
 * Romi :sunglasses: : Partial Conv
 * Tasos :sunglasses: : Dataset + Architecture
-* Manon :sunglasses: : 
+* Manon :sunglasses: : :sleeping: :sleeping: :sleeping:
 
