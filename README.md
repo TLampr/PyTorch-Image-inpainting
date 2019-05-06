@@ -13,4 +13,6 @@ __Todo :__
 
 __A lovely VNet :__
 
+_Note : on the image we have filters 7 -> 5 -> 3 -> 3 but in the article we have 7 -> 5 -> 5 -> 3_
+
 ![picture alt](https://github.com/MathiasGruber/PConv-Keras/raw/master/data/images/architecture.png)
