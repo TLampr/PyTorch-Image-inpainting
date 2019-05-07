@@ -16,4 +16,4 @@ _Note 1 : on the image we have filters 7 -> 5 -> 3 -> 3 but in the article we ha
 _Note 2 : on the image we have batch norm since the first layer but in the article we do batch norm since layer 2_
 <br/>
 
-![picture alt](https://github.com/MathiasGruber/PConv-Keras/raw/master/data/images/architecture.png)
+![picture alt](architecture.png)
