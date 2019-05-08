@@ -4,8 +4,9 @@ class UNet(nn.Module):
     def __init__(self, img_shape):
         super(UNet, self).__init__()
         
-        #Todo : params
+        #Todo : nb_jump = get_params()
         nb_jump = 3
+        
         i = int(np.log2(512/img_shape))
         
         kernel_sizes = [7, 5, 5, 3, 3, 3, 3, 3]
@@ -138,9 +139,6 @@ for img in list_img :
   print("nb de layers encoding et decoding : ", nb_layers)
   print("check size : ", len(nb_channels))
   print("nb of channels in the network : ", nb_channels)
-  
-  model = UNet(img_shape)
-  output = model(img)
 
   output_feature = []
   out = img
@@ -155,4 +153,7 @@ for img in list_img :
     concat = torch.cat((output_feature[nb_layers - j - 1], nearestUpSample), dim=1)
     out = model.decoding_list[j](concat)
     print(out.shape)
+    
+  model = UNet(img_shape)
+  output = model(img)
   
