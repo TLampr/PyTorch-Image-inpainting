@@ -140,6 +140,9 @@ for img in list_img :
   print("check size : ", len(nb_channels))
   print("nb of channels in the network : ", nb_channels)
 
+  model = UNet(img_shape)
+  output = model(img)
+
   output_feature = []
   out = img
   output_feature.append(out)
@@ -153,7 +156,7 @@ for img in list_img :
     concat = torch.cat((output_feature[nb_layers - j - 1], nearestUpSample), dim=1)
     out = model.decoding_list[j](concat)
     print(out.shape)
-    
-  model = UNet(img_shape)
-  output = model(img)
+   
+
+
   
