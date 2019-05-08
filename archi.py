@@ -156,6 +156,8 @@ for img in list_img :
     concat = torch.cat((output_feature[nb_layers - j - 1], nearestUpSample), dim=1)
     out = model.decoding_list[j](concat)
     print(out.shape)
+    
+  #print(model)
    
 
 
