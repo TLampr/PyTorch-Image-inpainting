@@ -45,11 +45,11 @@ class UNet(nn.Module):
         self.nb_channels = []
 
         size = img_shape
-        for j in range(nb_jump):
+        for j in range(self.nb_jump):
             size = int(size / 2)
             self.nb_channels.insert(0, size)
 
-        for j in range(nb_layers - nb_jump):
+        for j in range(self.nb_layers - self.nb_jump):
             self.nb_channels.append(img_shape)
 
     def encoding(self):
