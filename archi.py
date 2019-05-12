@@ -63,7 +63,7 @@ class UNet(nn.Module):
                 nn.Conv2d(3, self.nb_channels[0], kernel_size=self.kernel_sizes[0], stride=2,
                           padding=int((self.kernel_sizes[0] - 1) / 2)), nn.ReLU()))
 
-        for j in range(1, nb_layers):
+        for j in range(1, self.nb_layers):
             self.encoding_list.append(
                 nn.Sequential(
                     nn.Conv2d(self.nb_channels[j - 1], self.nb_channels[j],
