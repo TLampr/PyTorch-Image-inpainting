@@ -100,15 +100,15 @@ class UNet(nn.Module):
         output_feature = []
         out = x
         output_feature.append(out)
-        for j in range(nb_layers):
+        for j in range(self.nb_layers):
             out = self.encoding_list[j](out)
             output_feature.append(out)
 
         # torch.cat((first_tensor, second_tensor), dimension)
 
-        for j in range(nb_layers):
+        for j in range(self.nb_layers):
             nearestUpSample = nn.UpsamplingNearest2d(scale_factor=2)(out)
-            concat = torch.cat((output_feature[nb_layers - j - 1], nearestUpSample), dim=1)
+            concat = torch.cat((output_feature[self.nb_layers - j - 1], nearestUpSample), dim=1)
             out = self.decoding_list[j](concat)
 
         return out
