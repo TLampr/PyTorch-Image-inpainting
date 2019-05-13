@@ -22,7 +22,12 @@ class loss:
         self.N = self.C * self.H * self.W * self.Igt.shape[0]
 
     def make_comp(self):
-        self.Icomp = None
+        self.Icomp = self.Iout.clone()
+        self.mask[self.mask!=0]=1
+        dummy = self.mask.clone().long()
+        for b in range(self.Igt.shape[0]):
+            for c in range(self.Igt.shape[1]):
+                self.Icomp[b,c,:,:][dummy[0,0,:,:]] = self.Igt[b,c,:,:][dummy[0,0,:,:]]
 
     def loss_function(self):
         loss = self.l_hole() + self.l_valid() + self.l_perc() + self.l_style_comp() + self.l_style_out()
@@ -82,7 +87,7 @@ class loss:
         vgg16.features._modules["9"].register_forward_hook(self.hook)
         vgg16.features._modules["16"].register_forward_hook(self.hook)
         out = vgg16.forward(img)
-        self.pool_gt = self.outputs.clone()
+        self.pool_gt = self.outputs.copy()
 
         # comp
         self.outputs = []
@@ -93,7 +98,7 @@ class loss:
         vgg16.features._modules["9"].register_forward_hook(self.hook)
         vgg16.features._modules["16"].register_forward_hook(self.hook)
         out = vgg16.forward(img)
-        self.pool_comp = self.outputs.clone()
+        self.pool_comp = self.outputs.copy()
 
         l_perc = 0.0
         for i in range(len(self.pool_out)):
