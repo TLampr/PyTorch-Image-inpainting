@@ -9,6 +9,7 @@ import tqdm
 dir_path = "C:/Users/anala/Desktop/coursecontent/Deep Learning/Project/Our-Lovely-Awesome-Team-Project/CelebA/img_celeba/data_crop_512_png"
 dir_path2 = "C:/Users/anala/Desktop/coursecontent/Deep Learning/Project/Our-Lovely-Awesome-Team-Project/CelebA/img_celeba/data_crop_512_png/masks"
 masks = {}
+masks_tensors = {}
 """THE MASKS"""
 for infile in glob.glob(dir_path2 + "/*.png"):
     file, ext = os.path.splitext(infile)
@@ -17,10 +18,12 @@ for infile in glob.glob(dir_path2 + "/*.png"):
     trans2 = torchvision.transforms.ToTensor()
     alpha_im = np.array(trans(trans2(im)).split()[3])
     alpha_im[alpha_im != 255] = 0
+    alpha_im[alpha_im == 255] = 1
     name = infile.split('/')[-1]
     masks[name] = trans(trans2(alpha_im))
+    masks_tensors[name] = trans2(alpha_im)
 
-torch.save(masks, 'masks.pt')
+torch.save(masks_tensors, 'masks.pt')
 
 key_array = np.array(list(masks.keys()))
 dest_tensor_list = []
