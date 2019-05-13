@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     data = torch.load('Programming_Part/data.pt')
     list_img = []
-    list_img.append(data)
+    list_img.append(data[:2])
 
     mask = torch.load('Programming_Part/masks.pt')
 
