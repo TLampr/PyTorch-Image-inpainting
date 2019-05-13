@@ -1,4 +1,5 @@
 # squared images
+from PIL import Image
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
@@ -116,11 +117,11 @@ class UNet(nn.Module):
 
 if __name__ == '__main__':
 
-    img512 = torch.rand(10, 3, 512, 512)
-    img256 = torch.rand(10, 3, 256, 256)
-    img128 = torch.rand(10, 3, 128, 128)
-    img64 = torch.rand(10, 3, 64, 64)
-    img32 = torch.rand(10, 3, 32, 32)
+    img512 = torch.rand(10, 4, 512, 512)
+    img256 = torch.rand(10, 4, 256, 256)
+    img128 = torch.rand(10, 4, 128, 128)
+    img64 = torch.rand(10, 4, 64, 64)
+    img32 = torch.rand(10, 4, 32, 32)
 
     list_img = []
     list_img.append(img512)
@@ -156,7 +157,7 @@ if __name__ == '__main__':
         output = model(img)
 
         #mask = make_mask()
-        #loss = loss(img, output, mask, )
+        loss = loss(img, output)
 
         output_feature = []
         out = img
