@@ -117,18 +117,24 @@ class UNet(nn.Module):
 
 if __name__ == '__main__':
 
-    img512 = torch.rand(10, 4, 512, 512)
-    img256 = torch.rand(10, 4, 256, 256)
-    img128 = torch.rand(10, 4, 128, 128)
-    img64 = torch.rand(10, 4, 64, 64)
-    img32 = torch.rand(10, 4, 32, 32)
+    # img512 = torch.rand(10, 4, 512, 512)
+    # img256 = torch.rand(10, 4, 256, 256)
+    # img128 = torch.rand(10, 4, 128, 128)
+    # img64 = torch.rand(10, 4, 64, 64)
+    # img32 = torch.rand(10, 4, 32, 32)
+    #
+    # list_img = []
+    # list_img.append(img512)
+    # list_img.append(img256)
+    # list_img.append(img128)
+    # list_img.append(img64)
+    # list_img.append(img32)
 
+    data = torch.load('Programming_Part/data.pt')
     list_img = []
-    list_img.append(img512)
-    list_img.append(img256)
-    list_img.append(img128)
-    list_img.append(img64)
-    list_img.append(img32)
+    list_img.append(data)
+
+    mask = torch.load('Programming_Part/masks.pt')
 
     for img in list_img:
         img_shape = img.shape[2]
@@ -157,7 +163,8 @@ if __name__ == '__main__':
         output = model(img)
 
         #mask = make_mask()
-        loss = loss(img, output)
+        loss = loss(img, output, mask["masks\\mask1.png"])
+        total_loss = loss.loss_function()
 
         output_feature = []
         out = img

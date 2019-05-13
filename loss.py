@@ -10,15 +10,19 @@ import torchvision.models as models
 
 class loss:
 
-    def __init__(self, Igt, Iout, mask):
+    def __init__(self, img, output, mask):
         self.C = 3
         self.H = 512
         self.W = 512
-        self.N = self.C*self.H*self.W
         self.outputs = []
-        self.Igt = Igt
-        self.Iout = Iout
-        self.mask = mask
+        self.Igt = img #Igt
+        self.Iout = output.data #Iout
+        self.mask = mask[None, :, :, :]
+        self.Icomp = self.make_comp()
+        self.N = self.C * self.H * self.W * self.Igt.shape[0]
+
+    def make_comp(self):
+        self.Icomp = None
 
     def loss_function(self):
         loss = self.l_hole() + self.l_valid() + self.l_perc() + self.l_style_comp() + self.l_style_out()
@@ -32,8 +36,8 @@ class loss:
         Nigt = self.N
         aux1 = (1 - self.mask)
         aux2 = self.Iout - self.Igt
-        aux3 = (aux1*aux2).view(-1)
-        l1_loss = torch.norm(aux3, p=1, dim=1)
+        aux3 = (aux1*aux2)
+        l1_loss = torch.norm(aux3, p=1)
         l_hole = l1_loss/Nigt
         return l_hole
 
@@ -45,7 +49,7 @@ class loss:
         Nigt = self.N
         aux1 = self.Iout - self.Igt
         aux2 = self.mask*aux1
-        l1_loss = torch.norm(aux2.view(-1), p=1, dim=1)
+        l1_loss = torch.norm(aux2, p=1)
         l_valid = l1_loss/Nigt
         return l_valid
 
@@ -60,20 +64,20 @@ class loss:
                                                  transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                       std=[0.229, 0.224, 0.225])])
         # out
-        img = transform_pipeline(self.Iout)
-        img = img.unsqueeze(0)
-        img = Variable(img)
+        #img = transform_pipeline(self.Iout)
+        #img = img.unsqueeze(0)
+        img = Variable(self.Iout)
         vgg16.features._modules["4"].register_forward_hook(self.hook)
         vgg16.features._modules["9"].register_forward_hook(self.hook)
         vgg16.features._modules["16"].register_forward_hook(self.hook)
         out = vgg16.forward(img)
-        self.pool_out = self.outputs.clone()
+        self.pool_out = self.outputs.copy()
 
         # gt
         self.outputs = []
-        img = transform_pipeline(self.Igt)
-        img = img.unsqueeze(0)
-        img = Variable(img)
+        #img = transform_pipeline(self.Igt)
+        #img = img.unsqueeze(0)
+        img = Variable(self.Igt)
         vgg16.features._modules["4"].register_forward_hook(self.hook)
         vgg16.features._modules["9"].register_forward_hook(self.hook)
         vgg16.features._modules["16"].register_forward_hook(self.hook)
@@ -82,9 +86,9 @@ class loss:
 
         # comp
         self.outputs = []
-        img = transform_pipeline(self.Icomp)
-        img = img.unsqueeze(0)
-        img = Variable(img)
+        #img = transform_pipeline(self.Icomp)
+        #img = img.unsqueeze(0)
+        img = Variable(self.Icomp)
         vgg16.features._modules["4"].register_forward_hook(self.hook)
         vgg16.features._modules["9"].register_forward_hook(self.hook)
         vgg16.features._modules["16"].register_forward_hook(self.hook)
@@ -95,9 +99,9 @@ class loss:
         for i in range(len(self.pool_out)):
             Nigt = torch.tensor(self.pool_gt[0].shape).prod()
             diff1 = self.pool_out[i] - self.pool_gt[i]
-            l1_loss1 = torch.norm(diff1.view(-1), p=1, dim=1)
+            l1_loss1 = torch.norm(diff1, p=1)
             diff2 = self.pool_comp[i] - self.pool_gt[i]
-            l1_loss2 = torch.norm(diff2.view(-1), p=1, dim=1)
+            l1_loss2 = torch.norm(diff2, p=1)
             l_perc += (l1_loss1 + l1_loss2)/Nigt
         return l_perc
 
@@ -116,7 +120,7 @@ class loss:
             phi_out_t = torch.transpose(self.pool_out, 0, 1)
             phi_gt_t = torch.transpose(self.pool_gt, 0, 1)
             diff = Kp*(torch.mm(phi_out_t, self.pool_out) - torch.mm(phi_gt_t, self.pool_gt))
-            l1 = torch.norm(diff.view(-1), p=1, dim=1)
+            l1 = torch.norm(diff, p=1)
             l_style += l1/(C*C)
         return l_style
 
@@ -132,7 +136,7 @@ class loss:
             phi_comp_t = torch.transpose(self.pool_comp, 0, 1)
             phi_gt_t = torch.transpose(self.pool_gt, 0, 1)
             diff = Kp*(torch.mm(phi_comp_t, self.pool_comp) - torch.mm(phi_gt_t, self.pool_gt))
-            l1 = torch.norm(diff.view(-1), p=1, dim=1)
+            l1 = torch.norm(diff, p=1)
             l_style += l1/(C*C)
         return l_style
 
