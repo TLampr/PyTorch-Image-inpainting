@@ -20,6 +20,8 @@ for infile in glob.glob(dir_path2 + "/*.png"):
     name = infile.split('/')[-1]
     masks[name] = trans(trans2(alpha_im))
 
+torch.save(masks, 'masks.pt')
+
 key_array = np.array(list(masks.keys()))
 dest_tensor_list = []
 tensor_list = []

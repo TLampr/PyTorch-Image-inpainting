@@ -46,11 +46,11 @@ class UNet(nn.Module):
         self.nb_channels = []
 
         size = img_shape
-        for j in range(nb_jump):
+        for j in range(self.nb_jump):
             size = int(size / 2)
             self.nb_channels.insert(0, size)
 
-        for j in range(nb_layers - nb_jump):
+        for j in range(self.nb_layers - self.nb_jump):
             self.nb_channels.append(img_shape)
 
     def encoding(self):
@@ -64,7 +64,7 @@ class UNet(nn.Module):
                 nn.Conv2d(3, self.nb_channels[0], kernel_size=self.kernel_sizes[0], stride=2,
                           padding=int((self.kernel_sizes[0] - 1) / 2)), nn.ReLU()))
 
-        for j in range(1, nb_layers):
+        for j in range(1, self.nb_layers):
             self.encoding_list.append(
                 nn.Sequential(
                     nn.Conv2d(self.nb_channels[j - 1], self.nb_channels[j],
@@ -101,15 +101,15 @@ class UNet(nn.Module):
         output_feature = []
         out = x
         output_feature.append(out)
-        for j in range(nb_layers):
+        for j in range(self.nb_layers):
             out = self.encoding_list[j](out)
             output_feature.append(out)
 
         # torch.cat((first_tensor, second_tensor), dimension)
 
-        for j in range(nb_layers):
+        for j in range(self.nb_layers):
             nearestUpSample = nn.UpsamplingNearest2d(scale_factor=2)(out)
-            concat = torch.cat((output_feature[nb_layers - j - 1], nearestUpSample), dim=1)
+            concat = torch.cat((output_feature[self.nb_layers - j - 1], nearestUpSample), dim=1)
             out = self.decoding_list[j](concat)
 
         return out
