@@ -29,8 +29,8 @@ class loss(nn.Module):
         dummy = self.mask.clone().long()
         for b in range(self.Igt.shape[0]):
             for c in range(self.Igt.shape[1]):
-                self.Icomp[b, c, :, :][np.where(dummy[0, 0, :, :] == 1)] = self.Igt[b, c, :, :][
-                    np.where(dummy[0, 0, :, :] == 1)]
+                self.Icomp[b, c, :, :][np.where(dummy[b, 0, :, :] == 1)] = self.Igt[b, c, :, :][
+                    np.where(dummy[b, 0, :, :] == 1)]
         return self.Icomp
 
     def loss_function(self):
@@ -45,8 +45,9 @@ class loss(nn.Module):
         Nigt = self.N
         aux1 = (1 - self.mask)
         aux2 = self.Iout - self.Igt
-        aux3 = (aux1 * aux2)
-        l1_loss = torch.norm(aux3, p=1)
+        l1_loss = 0.0
+        for i in range(aux2.shape[0]):
+            l1_loss += torch.norm(aux1 * aux2, p=1)
         l_hole = l1_loss / Nigt
         return l_hole
 
@@ -57,8 +58,10 @@ class loss(nn.Module):
         """
         Nigt = self.N
         aux1 = self.Iout - self.Igt
-        aux2 = self.mask * aux1
-        l1_loss = torch.norm(aux2, p=1)
+        l1_loss = 0.0
+        for i in range(self.mask.shape[0]):
+            aux2 = self.mask[i].reshape(1,-1,-1,-1) * aux1[i].reshape(1,-1,-1,-1)
+            l1_loss += torch.norm(aux2, p=1)
         l_valid = l1_loss / Nigt
         return l_valid
 
