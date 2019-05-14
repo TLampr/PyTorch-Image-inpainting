@@ -9,9 +9,10 @@ import torchvision.models as models
 import numpy as np
 
 
-class loss:
+class loss(nn.Module):
 
     def __init__(self, img, output, mask):
+        super(loss, self).__init__()
         self.C = 3
         self.H = 512
         self.W = 512
@@ -112,12 +113,14 @@ class loss:
         l_style = 0.0
         for i in range(len(self.pool_gt)):
             B, C, H, W = self.pool_gt[i].shape
-            Kp = 1/(C * H * W)
+            Kp = 1 / (C * H * W)
             for b in range(B):
                 for c in range(C):
-                    phi_out_t = torch.transpose(self.pool_out[i][b,c,:,:], 0, 1)
-                    phi_gt_t = torch.transpose(self.pool_gt[i][b,c,:,:], 0, 1)
-                    diff = Kp * (torch.mm(phi_out_t, self.pool_out[i][b,c,:,:]) - torch.mm(phi_gt_t, self.pool_gt[i][b,c,:,:]))
+                    phi_out_t = torch.transpose(self.pool_out[i][b, c, :, :], 0, 1)
+                    phi_gt_t = torch.transpose(self.pool_gt[i][b, c, :, :], 0, 1)
+                    diff = Kp * (torch.mm(phi_out_t, self.pool_out[i][b, c, :, :]) - torch.mm(phi_gt_t,
+                                                                                              self.pool_gt[i][b, c, :,
+                                                                                              :]))
                     l1 = torch.norm(diff, p=1)
                     l_style += l1 / (C * C)
         return l_style
@@ -130,13 +133,13 @@ class loss:
         l_style = 0.0
         for i in range(len(self.pool_gt)):
             B, C, H, W = self.pool_gt[i].shape
-            Kp = 1/(C * H * W)
+            Kp = 1 / (C * H * W)
             for b in range(B):
                 for c in range(C):
-                    phi_comp_t = torch.transpose(self.pool_comp[i][b,c,:,:], 0, 1)
-                    phi_gt_t = torch.transpose(self.pool_gt[i][b,c,:,:], 0, 1)
-                    diff = Kp * (torch.mm(phi_comp_t, self.pool_comp[i][b,c,:,:]) -
-                                 torch.mm(phi_gt_t, self.pool_gt[i][b,c,:,:]))
+                    phi_comp_t = torch.transpose(self.pool_comp[i][b, c, :, :], 0, 1)
+                    phi_gt_t = torch.transpose(self.pool_gt[i][b, c, :, :], 0, 1)
+                    diff = Kp * (torch.mm(phi_comp_t, self.pool_comp[i][b, c, :, :]) -
+                                 torch.mm(phi_gt_t, self.pool_gt[i][b, c, :, :]))
                     l1 = torch.norm(diff, p=1)
                     l_style += l1 / (C * C)
         return l_style
