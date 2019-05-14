@@ -19,7 +19,7 @@ class loss(nn.Module):
         self.outputs = []
         self.Igt = img  # Igt
         self.Iout = output.data  # Iout
-        self.mask = mask[None, :, :, :]
+        self.mask = mask  # [None, :, :, :]
         self.Icomp = self.make_comp()
         self.N = self.C * self.H * self.W * self.Igt.shape[0]
 
@@ -60,7 +60,7 @@ class loss(nn.Module):
         aux1 = self.Iout - self.Igt
         l1_loss = 0.0
         for i in range(self.mask.shape[0]):
-            aux2 = self.mask[i].reshape(1,-1,-1,-1) * aux1[i].reshape(1,-1,-1,-1)
+            aux2 = self.mask[i][None, :, :, :] * aux1[i][None, :, :, :]
             l1_loss += torch.norm(aux2, p=1)
         l_valid = l1_loss / Nigt
         return l_valid

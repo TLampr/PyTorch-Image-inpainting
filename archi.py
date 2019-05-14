@@ -143,9 +143,10 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
             optimizer.zero_grad()
             outputs = model(X)
             loss_size = our_loss(img=y, output=outputs, mask=M)
-            loss_size.backward()
+            loss = loss_size.loss_function()
+            loss.backward()
             optimizer.step()
-            running_loss += loss_size.data
+            running_loss += loss.data
         train_loss.append(float(running_loss) / (N / batch_size))
         print("train_loss", float(running_loss) / (N / batch_size))
         print('epoch', epoch + 1)
