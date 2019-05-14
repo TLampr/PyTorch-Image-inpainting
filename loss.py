@@ -71,38 +71,26 @@ class loss:
         transform_pipeline = transforms.Compose([transforms.ToTensor(),
                                                  transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                       std=[0.229, 0.224, 0.225])])
-        # out
-        # img = transform_pipeline(self.Iout)
-        # img = img.unsqueeze(0)
-        img = Variable(self.Iout)
+
         vgg16.features._modules["4"].register_forward_hook(self.hook)
         vgg16.features._modules["9"].register_forward_hook(self.hook)
         vgg16.features._modules["16"].register_forward_hook(self.hook)
+
+        # out
+        img = Variable(self.Iout)
         out = vgg16.forward(img)
-        self.pool_out = self.outputs.copy()
 
         # gt
-        self.outputs = []
-        # img = transform_pipeline(self.Igt)
-        # img = img.unsqueeze(0)
         img = Variable(self.Igt)
-        vgg16.features._modules["4"].register_forward_hook(self.hook)
-        vgg16.features._modules["9"].register_forward_hook(self.hook)
-        vgg16.features._modules["16"].register_forward_hook(self.hook)
         out = vgg16.forward(img)
-        self.pool_gt = self.outputs.copy()
 
         # comp
-        self.outputs = []
-        # img = transform_pipeline(self.Icomp)
-        # img = img.unsqueeze(0)
         img = Variable(self.Icomp)
-        vgg16.features._modules["4"].register_forward_hook(self.hook)
-        vgg16.features._modules["9"].register_forward_hook(self.hook)
-        vgg16.features._modules["16"].register_forward_hook(self.hook)
         out = vgg16.forward(img)
-        self.pool_comp = self.outputs.copy()
 
+        self.pool_out = self.outputs[0:3].copy()
+        self.pool_gt = self.outputs[3:6].copy()
+        self.pool_comp = self.outputs[6:9].copy()
         l_perc = 0.0
         for i in range(len(self.pool_out)):
             Nigt = torch.tensor(self.pool_gt[0].shape).prod()
@@ -123,13 +111,15 @@ class loss:
         """
         l_style = 0.0
         for i in range(len(self.pool_gt)):
-            C, H, W = self.pool_gt.shape
-            Kp = C * H * W
-            phi_out_t = torch.transpose(self.pool_out, 0, 1)
-            phi_gt_t = torch.transpose(self.pool_gt, 0, 1)
-            diff = Kp * (torch.mm(phi_out_t, self.pool_out) - torch.mm(phi_gt_t, self.pool_gt))
-            l1 = torch.norm(diff, p=1)
-            l_style += l1 / (C * C)
+            B, C, H, W = self.pool_gt[i].shape
+            Kp = 1/(C * H * W)
+            for b in range(B):
+                for c in range(C):
+                    phi_out_t = torch.transpose(self.pool_out[i][b,c,:,:], 0, 1)
+                    phi_gt_t = torch.transpose(self.pool_gt[i][b,c,:,:], 0, 1)
+                    diff = Kp * (torch.mm(phi_out_t, self.pool_out[i][b,c,:,:]) - torch.mm(phi_gt_t, self.pool_gt[i][b,c,:,:]))
+                    l1 = torch.norm(diff, p=1)
+                    l_style += l1 / (C * C)
         return l_style
 
     def l_style_comp(self):
@@ -139,13 +129,16 @@ class loss:
         """
         l_style = 0.0
         for i in range(len(self.pool_gt)):
-            C, H, W = self.pool_gt.shape
-            Kp = C * H * W
-            phi_comp_t = torch.transpose(self.pool_comp, 0, 1)
-            phi_gt_t = torch.transpose(self.pool_gt, 0, 1)
-            diff = Kp * (torch.mm(phi_comp_t, self.pool_comp) - torch.mm(phi_gt_t, self.pool_gt))
-            l1 = torch.norm(diff, p=1)
-            l_style += l1 / (C * C)
+            B, C, H, W = self.pool_gt[i].shape
+            Kp = 1/(C * H * W)
+            for b in range(B):
+                for c in range(C):
+                    phi_comp_t = torch.transpose(self.pool_comp[i][b,c,:,:], 0, 1)
+                    phi_gt_t = torch.transpose(self.pool_gt[i][b,c,:,:], 0, 1)
+                    diff = Kp * (torch.mm(phi_comp_t, self.pool_comp[i][b,c,:,:]) -
+                                 torch.mm(phi_gt_t, self.pool_gt[i][b,c,:,:]))
+                    l1 = torch.norm(diff, p=1)
+                    l_style += l1 / (C * C)
         return l_style
 
 # if __name__ == '__main__':
