@@ -24,7 +24,7 @@ class PartialConv2d(nn.Module):
         # it is needed to compute the convolution of the mask separately
         # in order to update its size in each level of the u-net
 
-        self.mask_conv = nn.Conv2d(1, 1, kernel_size,
+        self.mask_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                    stride, padding, dilation, groups, False)
         torch.nn.init.constant_(self.mask_conv.weight, 1.0)
 
@@ -108,8 +108,7 @@ class UNet(nn.Module):
         for j in range(self.nb_layers - self.nb_jump):
             self.nb_channels.append(img_shape)
             
-        
-            
+             
 
     def encoding(self):
         """
@@ -168,10 +167,19 @@ class UNet(nn.Module):
         # torch.cat((first_tensor, second_tensor), dimension)
 
         for j in range(self.nb_layers):
-            nearestUpSample = nn.UpsamplingNearest2d(scale_factor=2)(out)
-            concat = torch.cat((output_feature[self.nb_layers - j - 1], nearestUpSample), dim=1)
-            out = self.decoding_list[j](concat)
+            nearestUpSample_image = nn.UpsamplingNearest2d(scale_factor=2)(out[0])
+            nearestUpSample_mask = nn.UpsamplingNearest2d(scale_factor=2)(out[1])
+            
+            concat_image = torch.cat((output_feature[self.nb_layers - j - 1][0], nearestUpSample_image), dim=1)
+            concat_mask = torch.cat((output_feature[self.nb_layers - j - 1][1], nearestUpSample_mask), dim=1)
 
+            out = concat_image, concat_mask
+            out = self.decoding_list[j][0](out)
+            
+            if j < self.nb_layers - 1 : 
+                image = self.decoding_list[j][1](out[0])
+                out = image, out[1]
+                  
         return out
 
 
@@ -233,6 +241,7 @@ if __name__ == '__main__':
     labels = torch.load('Programming_Part/data.pt')
     data = torch.load('Programming_Part/total_dest_data.pt')
     masks = data[:, 3, :, :][:, None, :, :]
+    masks = torch.cat((masks, masks, masks), dim = 1)
     data = data[:, :3, :, :]
     masks[masks != 0] = 1
     train_data = data, labels
