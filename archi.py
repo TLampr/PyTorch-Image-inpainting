@@ -19,12 +19,12 @@ class PartialConv2d(nn.Module):
         # between mask and input
         self.input_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                     stride, padding, dilation, groups, bias)
-        torch.nn.init.xavier_uniform(self.input_conv.weight)
+        torch.nn.init.xavier_uniform_(self.input_conv.weight)
 
         # it is needed to compute the convolution of the mask separately
         # in order to update its size in each level of the u-net
 
-        self.mask_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
+        self.mask_conv = nn.Conv2d(1, 1, kernel_size,
                                    stride, padding, dilation, groups, False)
         torch.nn.init.constant_(self.mask_conv.weight, 1.0)
 
@@ -36,8 +36,10 @@ class PartialConv2d(nn.Module):
         for param in self.input_conv.parameters():
             param.requires_grad = True
 
-    def forward(self, image, mask):
+    def forward(self, args):
 
+        image, mask = args
+        
         output = self.input_conv(image*mask)
 
         if self.input_conv.bias is not None:
@@ -105,6 +107,9 @@ class UNet(nn.Module):
 
         for j in range(self.nb_layers - self.nb_jump):
             self.nb_channels.append(img_shape)
+            
+        
+            
 
     def encoding(self):
         """
@@ -150,12 +155,14 @@ class UNet(nn.Module):
         # print(self.encoding_list)
         # print(self.decoding_list)
 
-    def forward(self, x):
+    def forward(self, x, mask):
         output_feature = []
-        out = x
+        out = x, mask
         output_feature.append(out)
         for j in range(self.nb_layers):
-            out = self.encoding_list[j](out)
+            out = self.encoding_list[j][0](out)
+            image = self.encoding_list[j][1](out[0])
+            out = image, out[1]
             output_feature.append(out)
 
         # torch.cat((first_tensor, second_tensor), dimension)
@@ -191,7 +198,7 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
             M = masks[inds]
             X, y, M = Variable(X), Variable(y), Variable(M)
             optimizer.zero_grad()
-            outputs = model(X)
+            outputs = model(X, M)
             loss_size = our_loss(img=y, output=outputs, mask=M)
             loss = loss_size.loss_function()
             loss.backward()
