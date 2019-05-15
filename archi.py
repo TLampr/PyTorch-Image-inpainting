@@ -33,7 +33,7 @@ class PartialConv2d(nn.Module):
             param.requires_grad = False
 
         # conv is updated
-        for param in self.init_conv.parameters():
+        for param in self.input_conv.parameters():
             param.requires_grad = True
 
     def forward(self, image, mask):
