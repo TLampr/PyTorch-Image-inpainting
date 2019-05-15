@@ -9,6 +9,56 @@ import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 
+class PartialConv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, dilation=1, groups=1, bias=True):
+        super().__init__()
+
+        # this is the main convolution, which is going to be in charge of
+        # getting the 2D convolution of the element-wise multiplication
+        # between mask and input
+        self.input_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
+                                    stride, padding, dilation, groups, bias)
+        torch.nn.init.xavier_uniform(self.input_conv.weight)
+
+        # it is needed to compute the convolution of the mask separately
+        # in order to update its size in each level of the u-net
+
+        self.mask_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
+                                   stride, padding, dilation, groups, False)
+        torch.nn.init.constant_(self.mask_conv.weight, 1.0)
+
+        # mask is not updated
+        for param in self.mask_conv.parameters():
+            param.requires_grad = False
+
+        # conv is updated
+        for param in self.init_conv.parameters():
+            param.requires_grad = True
+
+    def forward(self, image, mask):
+
+        output = self.input_conv(image*mask)
+
+        if self.input_conv.bias is not None:
+            output_bias = self.input_conv.bias.view(1, -1, 1, 1).expand_as(output)
+        else:
+            output_bias = torch.zeros_like(output)
+
+        with torch.no_grad():
+            output_mask = self.mask_conv(mask)
+
+        zeros_mask = output_mask == 0
+        sum_M = output_mask.masked_fill_(zeros_mask, 1.0)
+
+        output_pre = (output - output_bias) / sum_M + output_bias
+        output = output_pre.masked_fill_(zeros_mask, 0.0)
+
+        new_mask = torch.ones_like(output)
+        new_mask = new_mask.masked_fill_(zeros_mask, 0.0)
+
+        return output, new_mask
+
 
 class UNet(nn.Module):
     def __init__(self, img_shape):
@@ -64,13 +114,13 @@ class UNet(nn.Module):
         self.encoding_list = nn.ModuleList()
         self.encoding_list.append(
             nn.Sequential(
-                nn.Conv2d(3, self.nb_channels[0], kernel_size=self.kernel_sizes[0], stride=2,
+                PartialConv2d(3, self.nb_channels[0], kernel_size=self.kernel_sizes[0], stride=2,
                           padding=int((self.kernel_sizes[0] - 1) / 2)), nn.ReLU()))
 
         for j in range(1, self.nb_layers):
             self.encoding_list.append(
                 nn.Sequential(
-                    nn.Conv2d(self.nb_channels[j - 1], self.nb_channels[j],
+                    PartialConv2d(self.nb_channels[j - 1], self.nb_channels[j],
                               kernel_size=self.kernel_sizes[j], stride=2,
                               padding=int((self.kernel_sizes[j] - 1) / 2)),
                     nn.BatchNorm2d(self.nb_channels[j]),
@@ -85,7 +135,7 @@ class UNet(nn.Module):
         for j in range(self.nb_layers - 1):
             self.decoding_list.append(
                 nn.Sequential(
-                    nn.Conv2d(self.nb_channels[self.nb_layers - j - 1] + self.nb_channels[self.nb_layers - j - 2],
+                    PartialConv2d(self.nb_channels[self.nb_layers - j - 1] + self.nb_channels[self.nb_layers - j - 2],
                               self.nb_channels[self.nb_layers - j - 2], kernel_size=3, stride=1, padding=1),
                     nn.BatchNorm2d(self.nb_channels[self.nb_layers - j - 2]),
                     nn.LeakyReLU(0.2)
@@ -94,7 +144,7 @@ class UNet(nn.Module):
 
         self.decoding_list.append(
             nn.Sequential(
-                nn.Conv2d(self.nb_channels[0] + 3, 3, kernel_size=3, stride=1, padding=1))
+                PartialConv2d(self.nb_channels[0] + 3, 3, kernel_size=3, stride=1, padding=1))
         )
         # no batch norm or relu here -> output is the reconstructed image
         # print(self.encoding_list)
@@ -147,6 +197,7 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
             loss.backward()
             optimizer.step()
             running_loss += loss.data
+            print(loss.data)
         train_loss.append(float(running_loss) / (N / batch_size))
         print("train_loss", float(running_loss) / (N / batch_size))
         print('epoch', epoch + 1)
