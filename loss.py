@@ -39,6 +39,7 @@ class loss(nn.Module):
             self.l_style_out(), requires_grad=True)
         return loss
 
+
     def l_hole(self):
         """
         Computation of one of the pixel losses: l_hole
