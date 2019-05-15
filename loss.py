@@ -18,7 +18,7 @@ class loss(nn.Module):
         self.W = 512
         self.outputs = []
         self.Igt = img  # Igt
-        self.Iout = output.data  # Iout
+        self.Iout = output.data  # Iout torch.nn.Parameter()
         self.mask = mask  # [None, :, :, :]
         self.Icomp = self.make_comp()
         self.N = self.C * self.H * self.W * self.Igt.shape[0]
@@ -34,7 +34,9 @@ class loss(nn.Module):
         return self.Icomp
 
     def loss_function(self):
-        loss = self.l_hole() + self.l_valid() + self.l_perc() + self.l_style_comp() + self.l_style_out()
+        loss = Variable(self.l_hole(), requires_grad=True) + Variable(self.l_valid(), requires_grad=True) + Variable(
+            self.l_perc(), requires_grad=True) + Variable(self.l_style_comp(), requires_grad=True) + Variable(
+            self.l_style_out(), requires_grad=True)
         return loss
 
     def l_hole(self):
