@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 class PartialConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True):
-        super().__init__()
+        super(PartialConv2d, self).__init__()
 
         # this is the main convolution, which is going to be in charge of
         # getting the 2D convolution of the element-wise multiplication
