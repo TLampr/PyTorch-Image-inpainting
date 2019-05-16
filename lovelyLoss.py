@@ -176,15 +176,20 @@ class loss(nn.modules.loss._WeightedLoss):
         Ncomp = C * H * W
         aux1 = 0.0
         aux2 = 0.0
-        for b in range(B):
-            for i in range(H):
-                for j in range(W-1):
-                    if j < W - 1:
-                        diff = self.Icomp[b,:,i,j+1] - self.Icomp[b,:,i,j]
-                        aux1 += torch.norm(diff, p=1)
-                    if i < H - 1:
-                        diff = self.Icomp[b, :, i + 1, j] - self.Icomp[b, :, i, j]
-                        aux2 += torch.norm(diff, p=1)
+        hole_pix = (self.mask[0,0,:,:] == 0).nonzero()
+        for coord in hole_pix:
+            coord_j = coord.clone()
+            coord_j[0] += 1
+            coord_i = coord.clone()
+            coord_i[1] += 1
+            if coord_j in hole_pix:
+                diff = self.Icomp[:, :, coord_j[0], coord_j[1]] - \
+                       self.Icomp[:, :, coord[0], coord[1]]
+                aux1 += torch.norm(diff, p=1)
+            if coord_i in hole_pix:
+                diff = self.Icomp[:, :, coord_i[0], coord_i[1]] - \
+                       self.Icomp[:, :, coord[0], coord[1]]
+                aux2 += torch.norm(diff, p=1)
         l_tv = (aux1 + aux2)/Ncomp
         return l_tv
 
