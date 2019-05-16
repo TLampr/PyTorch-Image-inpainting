@@ -4,7 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 import torch
-from loss import loss as our_loss
+from lossManon import loss as our_loss
 import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
@@ -191,6 +191,7 @@ class UNet(nn.Module):
 
 def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    criterion = our_loss()
     train_data, train_labels = train_set
     N = train_data.shape[0]
     epoch = 0
@@ -207,8 +208,8 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
             X, y, M = Variable(X), Variable(y), Variable(M)
             optimizer.zero_grad()
             outputs = model(X, M)
-            loss_size = our_loss(img=y, output=outputs, mask=M)
-            loss = loss_size.loss_function()
+            loss = criterion(Igt=y, Iout=outputs[0], mask=M)
+            train_loss.append(loss)
             loss.backward()
             optimizer.step()
             running_loss += loss.data
