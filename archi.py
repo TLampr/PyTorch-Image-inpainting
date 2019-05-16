@@ -4,7 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 import torch
-from lossManon import loss as our_loss
+from lovelyLoss import loss as our_loss
 import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
