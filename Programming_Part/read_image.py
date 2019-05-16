@@ -4,14 +4,15 @@ import matplotlib.pyplot as plt
 import glob, os
 import torchvision
 import torch
-import tqdm
+from tqdm import tqdm
 
 dir_path = "C:/Users/anala/Desktop/coursecontent/Deep Learning/Project/Our-Lovely-Awesome-Team-Project/CelebA/img_celeba/data_crop_512_png"
 dir_path2 = "C:/Users/anala/Desktop/coursecontent/Deep Learning/Project/Our-Lovely-Awesome-Team-Project/CelebA/img_celeba/data_crop_512_png/masks"
+dir_path3 = "C:/Users/anala/Desktop/coursecontent/Deep Learning/Project/Our-Lovely-Awesome-Team-Project/CelebA/img_celeba/data_crop_512_png/Completed"
 masks = {}
 masks_tensors = {}
 """THE MASKS"""
-for infile in glob.glob(dir_path2 + "/*.png"):
+for infile in tqdm(glob.glob(dir_path2 + "/*.png")):
     file, ext = os.path.splitext(infile)
     im = Image.open(infile)
     trans = torchvision.transforms.ToPILImage()
@@ -31,7 +32,7 @@ tensor_list = []
 total_dest_tensor_list = []
 counter = 0
 """SAVES THE IMAGES AND THE DESTROYED ONES AS TWO BIG TENSORS"""
-for infile in glob.glob(dir_path + "/*.png"):
+for infile in tqdm(glob.glob(dir_path + "/*.png")):
     file, ext = os.path.splitext(infile)
     """READS THE IMAGE"""
     im = Image.open(infile)
@@ -53,22 +54,25 @@ for infile in glob.glob(dir_path + "/*.png"):
     """CREATE AN IMAGE WITH ONLY THE ALPHA CHANNEL DESTROYED"""
     pil_im_dest.putalpha(masks[key])
     tensor_im_total_dest = trans2(pil_im_total_dest)
-    tensor_im_dest = trans2(pil_im_dest)
-    dest_tensor_list.append(tensor_im_dest)
+    # tensor_im_dest = trans2(pil_im_dest)
+    # dest_tensor_list.append(tensor_im_dest)
     tensor_list.append(tensor_im)
     total_dest_tensor_list.append(tensor_im_total_dest)
+    filename = os.path.splitext(infile)[0].split("\\")[1]
+    # im.save(dir_path3 + "/" + filename + ext)
+    # os.remove(dir_path + "/" + filename + ext)
     counter += 1
-    """STOP AT 10 IMAGES"""
-    if counter == 30000:
-        break
+    # """STOP AT 10 IMAGES"""
+    # if counter == 1000:
+    #     break
 """STACK THE DATA IN (NUMBER x CHANNELS x PIXELS x PIXELS)"""
 """ONLY THE ALPHA DESTROYED"""
-dest_data = torch.stack(dest_tensor_list)
+# dest_data = torch.stack(dest_tensor_list)
 """GROUND TRUTH"""
 data = torch.stack(tensor_list)
 """TOTALLY DESTROYED"""
 total_dest_data = torch.stack(total_dest_tensor_list)
 """SAVE THE DATA IN PT FORMAT"""
-torch.save(dest_data, 'dest_data.pt')
+# torch.save(dest_data, 'dest_data.pt')
 torch.save(data, 'data.pt')
 torch.save(total_dest_data, 'total_dest_data.pt')

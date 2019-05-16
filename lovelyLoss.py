@@ -42,7 +42,8 @@ class loss(nn.modules.loss._WeightedLoss):
         X_train = X[mask].reshape(d*n_len, -1)"""
 
     def loss_function(self):
-        loss = self.l_hole() + self.l_valid() + self.l_perc() + self.l_style_comp() + self.l_style_out()
+        loss = 6*self.l_hole() + self.l_valid() + 0.05*self.l_perc() \
+               + 120*(self.l_style_comp() + self.l_style_out()) + 0.1*self.l_tv()
         return loss
 
     def l_hole(self):
@@ -50,7 +51,6 @@ class loss(nn.modules.loss._WeightedLoss):
         Computation of one of the pixel losses: l_hole
         :return: value of l_hole
         """        
-
         Nigt = self.N
         aux1 = (1 - self.mask)
         aux2 = self.Iout - self.Igt
@@ -94,6 +94,7 @@ class loss(nn.modules.loss._WeightedLoss):
         vgg16.features._modules["16"].register_forward_hook(self.hook)
         
         # out
+        self.outputs = []
         #img = transform_pipeline(self.Iout)
         #img = img.unsqueeze(0)
         img = Variable(self.Iout)
@@ -165,6 +166,27 @@ class loss(nn.modules.loss._WeightedLoss):
                     l1 = torch.norm(diff, p=1)
                     l_style += l1 / (C * C)
         return l_style
+    
+    def l_tv(self):
+        """
+        Compute the smoothing penalty: total variation loss
+        :return: total variation value
+        """
+        B, C, H, W = self.Icomp.shape
+        Ncomp = C * H * W
+        aux1 = 0.0
+        aux2 = 0.0
+        for b in range(B):
+            for i in range(H):
+                for j in range(W-1):
+                    if j < W - 1:
+                        diff = self.Icomp[b,:,i,j+1] - self.Icomp[b,:,i,j]
+                        aux1 += torch.norm(diff, p=1)
+                    if i < H - 1:
+                        diff = self.Icomp[b, :, i + 1, j] - self.Icomp[b, :, i, j]
+                        aux2 += torch.norm(diff, p=1)
+        l_tv = (aux1 + aux2)/Ncomp
+        return l_tv
 
 # if __name__ == '__main__':
 #     lt = loss_test(Igt, Iout, mask)

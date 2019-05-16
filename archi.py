@@ -4,11 +4,10 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 import torch
-from loss import loss as our_loss
+from lovelyLoss import loss as our_loss
 import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
-from lossManon import loss as loss_manon
 from sklearn.utils import shuffle
 
 
@@ -27,7 +26,7 @@ class PartialConv2d(nn.Module):
         # it is needed to compute the convolution of the mask separately
         # in order to update its size in each level of the u-net
 
-        self.mask_conv = nn.Conv2d(1, 1, kernel_size,
+        self.mask_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                    stride, padding, dilation, groups, False)
         torch.nn.init.constant_(self.mask_conv.weight, 1.0)
 
@@ -157,11 +156,6 @@ class UNet(nn.Module):
 
     def forward(self, x, mask):
         output_feature = []
-        out, new_mask = x
-        output_feature.append((out, new_mask))
-        for j in range(self.nb_layers):
-            out, new_mask = self.encoding_list[j]((out, new_mask))
-            output_feature.append((out, new_mask))
         out = x, mask
         output_feature.append(out)
         for j in range(self.nb_layers):
@@ -173,11 +167,20 @@ class UNet(nn.Module):
         # torch.cat((first_tensor, second_tensor), dimension)
 
         for j in range(self.nb_layers):
-            nearestUpSample = nn.UpsamplingNearest2d(scale_factor=2)((out, new_mask))
-            concat = torch.cat((output_feature[self.nb_layers - j - 1], nearestUpSample), dim=1)
-            out, new_mask = self.decoding_list[j](concat)
+            nearestUpSample_image = nn.UpsamplingNearest2d(scale_factor=2)(out[0])
+            nearestUpSample_mask = nn.UpsamplingNearest2d(scale_factor=2)(out[1])
 
-        return out, new_mask
+            concat_image = torch.cat((output_feature[self.nb_layers - j - 1][0], nearestUpSample_image), dim=1)
+            concat_mask = torch.cat((output_feature[self.nb_layers - j - 1][1], nearestUpSample_mask), dim=1)
+
+            out = concat_image, concat_mask
+            out = self.decoding_list[j][0](out)
+
+            if j < self.nb_layers - 1:
+                image = self.decoding_list[j][1](out[0])
+                out = image, out[1]
+
+        return out
 
 
 # def LossAndOptimizer(learning_rate, model, real_image, output, mask):
@@ -186,13 +189,15 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10):
+def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    loss = loss_manon()
+    criterion = our_loss()
     train_data, train_labels = train_set
+    val_data, val_labels = val_set
     N = train_data.shape[0]
     epoch = 0
     train_loss = []
+    validation_loss = []
     while epoch < n_epochs:
         running_loss = 0.0
         """SHUFFLING DATA"""
@@ -201,6 +206,7 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
         train_data, train_labels = torch.from_numpy(train_data), torch.from_numpy(train_labels)
         masks = train_data[:, 3, :, :][:, None, :, :]
         masks[masks != 0] = 1
+        masks = torch.cat((masks, masks, masks), dim=1)
         """LOOPING OVER THE BATCHES"""
         for j in range(int(N / batch_size)):
             j_start = j * batch_size
@@ -212,17 +218,25 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
             X, y, M = Variable(X), Variable(y), Variable(M)
             optimizer.zero_grad()
             outputs = model(X, M)
-            loss_size = loss(img=y, output=outputs, mask=M)
-            loss = loss_size.loss_function()
+            loss = criterion(Igt=y, Iout=outputs[0], mask=M)
+            train_loss.append(loss)
             loss.backward()
             optimizer.step()
             running_loss += loss.data
             print(loss.data)
         train_loss.append(float(running_loss) / (N / batch_size))
         print("train_loss", float(running_loss) / (N / batch_size))
+        val_masks = val_data[:, 3, :, :][:, None, :, :]
+        val_masks[val_masks != 0] = 1
+        X_val, y_val, M_val = Variable(val_data), Variable(val_labels), Variable(val_masks)
+        val_outputs = model(X_val, M_val)
+        val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
+        validation_loss.append(val_loss)
+        print("validation_loss", float(running_loss))
         print('epoch', epoch + 1)
         epoch += 1
     plt.plot(train_loss, label='train', color='b')
+    plt.plot(validation_loss, label='validation')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend()
@@ -245,10 +259,13 @@ if __name__ == '__main__':
 
     labels = torch.load('Programming_Part/data.pt')
     data = torch.load('Programming_Part/total_dest_data.pt')
-    masks = data[:, 3, :, :][:, None, :, :]
+    # masks = data[:, 3, :, :][:, None, :, :]
+    # masks = torch.cat((masks, masks, masks), dim=1)
     data = data[:, :3, :, :]
-    masks[masks != 0] = 1
-    train_data = data, labels
+    # masks[masks != 0] = 1
+    # train_data = data, labels
+    val_data = data[:100], labels[:100]
+    train_data = data[100:], labels[100:]
 
     model = UNet(data[0].shape[-1])
-    Fit(model=model, train_set=train_data, masks=masks, learning_rate=0.001, n_epochs=10, batch_size=2)
+    Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2)

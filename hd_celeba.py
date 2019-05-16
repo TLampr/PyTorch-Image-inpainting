@@ -115,7 +115,7 @@ def work(i):  # a single work
 
 if __name__ == '__main__':
     pool = Pool(args.n_worker)
-    for _ in tqdm(pool.imap(work, range(len(img_names))), total=len(img_names)):
+    for _ in tqdm(pool.imap(work, range(30000)), total=30000):#len(img_names)
         pass
     pool.close()
     pool.join()
