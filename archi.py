@@ -8,6 +8,8 @@ from loss import loss as our_loss
 import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
+from lossManon import loss as loss_manon
+from sklearn.utils import shuffle
 
 
 class PartialConv2d(nn.Module):
@@ -20,12 +22,12 @@ class PartialConv2d(nn.Module):
         # between mask and input
         self.input_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                     stride, padding, dilation, groups, bias)
-        torch.nn.init.xavier_uniform(self.input_conv.weight)
+        torch.nn.init.xavier_uniform_(self.input_conv.weight)
 
         # it is needed to compute the convolution of the mask separately
         # in order to update its size in each level of the u-net
 
-        self.mask_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
+        self.mask_conv = nn.Conv2d(1, 1, kernel_size,
                                    stride, padding, dilation, groups, False)
         torch.nn.init.constant_(self.mask_conv.weight, 1.0)
 
@@ -37,7 +39,9 @@ class PartialConv2d(nn.Module):
         for param in self.input_conv.parameters():
             param.requires_grad = True
 
-    def forward(self, image, mask):
+    def forward(self, args):
+
+        image, mask = args
 
         output = self.input_conv(image * mask)
 
@@ -151,13 +155,20 @@ class UNet(nn.Module):
         # print(self.encoding_list)
         # print(self.decoding_list)
 
-    def forward(self, x):
+    def forward(self, x, mask):
         output_feature = []
         out, new_mask = x
         output_feature.append((out, new_mask))
         for j in range(self.nb_layers):
             out, new_mask = self.encoding_list[j]((out, new_mask))
             output_feature.append((out, new_mask))
+        out = x, mask
+        output_feature.append(out)
+        for j in range(self.nb_layers):
+            out = self.encoding_list[j][0](out)
+            image = self.encoding_list[j][1](out[0])
+            out = image, out[1]
+            output_feature.append(out)
 
         # torch.cat((first_tensor, second_tensor), dimension)
 
@@ -177,13 +188,20 @@ class UNet(nn.Module):
 
 def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    loss = our_loss()
+    loss = loss_manon()
     train_data, train_labels = train_set
     N = train_data.shape[0]
     epoch = 0
     train_loss = []
     while epoch < n_epochs:
         running_loss = 0.0
+        """SHUFFLING DATA"""
+        train_data, train_labels = np.array(train_data), np.array(train_labels)
+        train_data, train_labels = shuffle(train_data, train_labels)
+        train_data, train_labels = torch.from_numpy(train_data), torch.from_numpy(train_labels)
+        masks = train_data[:, 3, :, :][:, None, :, :]
+        masks[masks != 0] = 1
+        """LOOPING OVER THE BATCHES"""
         for j in range(int(N / batch_size)):
             j_start = j * batch_size
             j_end = (j + 1) * batch_size
@@ -193,8 +211,8 @@ def Fit(model, train_set, masks, val_set=None, learning_rate=.01, n_epochs=10, b
             M = masks[inds]
             X, y, M = Variable(X), Variable(y), Variable(M)
             optimizer.zero_grad()
-            outputs = model(X)
-            loss_size = our_loss(img=y, output=outputs, mask=M)
+            outputs = model(X, M)
+            loss_size = loss(img=y, output=outputs, mask=M)
             loss = loss_size.loss_function()
             loss.backward()
             optimizer.step()

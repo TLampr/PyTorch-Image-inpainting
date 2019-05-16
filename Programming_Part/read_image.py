@@ -59,11 +59,14 @@ for infile in glob.glob(dir_path + "/*.png"):
     total_dest_tensor_list.append(tensor_im_total_dest)
     counter += 1
     """STOP AT 10 IMAGES"""
-    if counter == 10:
+    if counter == 30000:
         break
 """STACK THE DATA IN (NUMBER x CHANNELS x PIXELS x PIXELS)"""
+"""ONLY THE ALPHA DESTROYED"""
 dest_data = torch.stack(dest_tensor_list)
+"""GROUND TRUTH"""
 data = torch.stack(tensor_list)
+"""TOTALLY DESTROYED"""
 total_dest_data = torch.stack(total_dest_tensor_list)
 """SAVE THE DATA IN PT FORMAT"""
 torch.save(dest_data, 'dest_data.pt')
