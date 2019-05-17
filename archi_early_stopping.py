@@ -307,7 +307,10 @@ if __name__ == '__main__':
     # list_img.append(img64)
     # list_img.append(img32)
     
-    PATH = 'Programming_Part/checkpoint.pt' #put a relevant path here
+    if torch.cuda.is_available():
+       PATH = 'Programming_Part/checkpoint.pt' #put a relevant path here
+    else : 
+        PATH = 'Programming_Part/checkpoint.pt' #put a relevant path here
 
     labels = torch.load('Programming_Part/data.pt')
     
