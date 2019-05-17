@@ -274,7 +274,7 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
 
         # save variables and losses
         if epoch%20 == 0:
-            torch.save(val_outputs, "val_out_{}.dt".format(epoch))
+            torch.save(val_outputs, "val_out_{}.pt".format(epoch))
         save_val_loss += [val_loss]
         save_train_loss += [train_loss[-1]]
         
@@ -295,8 +295,8 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
         epoch += 1
 
     #save loss values
-    torch.save(torch.FloatTensor(save_val_loss), "validation_losses.dt")
-    torch.save(torch.FloatTensor(save_train_loss), "training_losses.dt")
+    torch.save(torch.FloatTensor(save_val_loss), "validation_losses.pt")
+    torch.save(torch.FloatTensor(save_train_loss), "training_losses.pt")
 
 
     plt.plot(train_loss, label='train', color='b')
