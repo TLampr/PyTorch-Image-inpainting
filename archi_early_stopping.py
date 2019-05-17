@@ -222,6 +222,10 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
     train_loss = []
     validation_loss = []
     dir_path = "/home/anala/Programming_Part/data"
+
+    # losses we want to save
+    save_val_loss = []
+    save_train_loss = []
     while epoch < n_epochs:
         for file in tqdm(os.listdir(dir_path)):
             if 'total' in file:
@@ -267,9 +271,15 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
         val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
         validation_loss.append(val_loss)
         print("validation_loss", float(running_loss))
+
+        # save variables and losses
+        if epoch%20 == 0:
+            torch.save(val_outputs, "val_out_{}.dt".format(epoch))
+        save_val_loss += [val_loss]
+        save_train_loss += [train_loss[-1]]
         
         #early_stopping :
-        if val_loss < min_val_loss:
+        if val_loss > min_val_loss:
             counter += 1
             if counter >= patience:
                 early_stop = True
@@ -283,7 +293,12 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
         
         print('epoch', epoch + 1)
         epoch += 1
-        
+
+    #save loss values
+    torch.save(torch.FloatTensor(save_val_loss), "validation_losses.dt")
+    torch.save(torch.FloatTensor(save_train_loss), "training_losses.dt")
+
+
     plt.plot(train_loss, label='train', color='b')
     plt.plot(validation_loss, label='validation')
     plt.ylabel('loss')
