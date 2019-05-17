@@ -191,7 +191,7 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6):
+def Fit(model, train_set=None, val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = our_loss()
     if torch.cuda.is_available():
@@ -210,6 +210,7 @@ def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch
     train_loss = []
     validation_loss = []
     dir_path = "/home/anala/Programming_Part/data"
+    val_counter = 0
     while epoch < n_epochs:
         for file in tqdm(os.listdir(dir_path)):
             if 'total' in file:
@@ -218,6 +219,20 @@ def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch
             labels = torch.load(file2)
             data = torch.load(file)
             train_data, train_labels = data, labels
+            if val_counter == 0:
+                validation = data[:100], labels[:100]
+                val_data, val_labels = validation[0], validation[1]
+                train_data, train_labels = data[100:], labels[100:]
+                val_masks = val_data[:, 3, :, :][:, None, :, :]
+                val_masks[val_masks != 0] = 1
+                val_masks = torch.cat((val_masks, val_masks, val_masks), dim=1)
+
+                X_val = val_data[:, :3, :, :]
+                y_val = val_labels[:, :3, :, :]
+                if torch.cuda.is_available():
+                    X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
+                else:
+                    X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
             N = train_data.shape[0]
             running_loss = 0.0
             """SHUFFLING DATA"""
@@ -250,9 +265,9 @@ def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch
         train_loss.append(float(running_loss) / (N / batch_size))
         print("train_loss", float(running_loss) / (N / batch_size))
         if torch.cuda.is_available():
-            X_val, y_val, M_val = Variable(val_data.cuda()), Variable(val_labels.cuda()), Variable(val_masks.cuda())
+            X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
         else:
-            X_val, y_val, M_val = Variable(val_data), Variable(val_labels), Variable(val_masks)
+            X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
         val_outputs = model(X_val, M_val)
         val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
         validation_loss.append(val_loss)
@@ -284,14 +299,14 @@ if __name__ == '__main__':
     # list_img.append(img64)
     # list_img.append(img32)
 
-    labels = torch.load('Programming_Part/data.pt')
+    # labels = torch.load('Programming_Part/data.pt')
     data = torch.load('Programming_Part/total_dest_data.pt')
     # masks = data[:, 3, :, :][:, None, :, :]
     # masks = torch.cat((masks, masks, masks), dim=1)
     # masks[masks != 0] = 1
     # train_data = data, labels
-    val_data = data[:100], labels[:100]
-    train_data = data[100:], labels[100:]
+    # val_data = data[:100], labels[:100]
+    # train_data = data[100:], labels[100:]
 
     model = UNet(data[0].shape[-1])
-    Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2)
+    Fit(model=model, learning_rate=0.001, n_epochs=10, batch_size=2)

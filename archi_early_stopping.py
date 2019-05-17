@@ -191,7 +191,7 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10, patience=10, PATH = None):
+def Fit(model, train_set=None, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10, patience=10, PATH = None):
     
     #early stopping :
     min_val_loss = np.Inf
@@ -202,22 +202,7 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
     
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = our_loss()
-    train_data, train_labels = train_set
-    
-    #validation set :
-    val_data, val_labels = val_set
-    val_masks = val_data[:, 3, :, :][:, None, :, :]
-    val_masks[val_masks != 0] = 1
-    val_masks = torch.cat((val_masks, val_masks, val_masks), dim=1)
 
-    X_val = val_data[:, :3, :, :]
-    y_val = val_labels[:, :3, :, :]
-    if torch.cuda.is_available():
-        X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
-    else:
-        X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
-
-    N = train_data.shape[0]
     epoch = 0
     train_loss = []
     validation_loss = []
@@ -226,14 +211,30 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
     # losses we want to save
     save_val_loss = []
     save_train_loss = []
+    val_counter = 0
     while epoch < n_epochs:
         for file in tqdm(os.listdir(dir_path)):
+            counter += 1
             if 'total' in file:
                 continue
             file2 = 'total_dest_' + file
             labels = torch.load(file2)
             data = torch.load(file)
             train_data, train_labels = data, labels
+            if val_counter == 0:
+                validation = data[:100], labels[:100]
+                val_data, val_labels = validation[0], validation[1]
+                train_data, train_labels = data[100:], labels[100:]
+                val_masks = val_data[:, 3, :, :][:, None, :, :]
+                val_masks[val_masks != 0] = 1
+                val_masks = torch.cat((val_masks, val_masks, val_masks), dim=1)
+
+                X_val = val_data[:, :3, :, :]
+                y_val = val_labels[:, :3, :, :]
+                if torch.cuda.is_available():
+                    X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
+                else:
+                    X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
             N = train_data.shape[0]
             running_loss = 0.0
             """SHUFFLING DATA"""
@@ -274,7 +275,7 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
 
         # save variables and losses
         if epoch%20 == 0:
-            torch.save(val_outputs, "val_out_{}.dt".format(epoch))
+            torch.save(val_outputs, "val_out_{}.pt".format(epoch))
         save_val_loss += [val_loss]
         save_train_loss += [train_loss[-1]]
         
@@ -295,8 +296,8 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
         epoch += 1
 
     #save loss values
-    torch.save(torch.FloatTensor(save_val_loss), "validation_losses.dt")
-    torch.save(torch.FloatTensor(save_train_loss), "training_losses.dt")
+    torch.save(torch.FloatTensor(save_val_loss), "validation_losses.pt")
+    torch.save(torch.FloatTensor(save_train_loss), "training_losses.pt")
 
 
     plt.plot(train_loss, label='train', color='b')
@@ -327,15 +328,15 @@ if __name__ == '__main__':
     else : 
         PATH = 'Programming_Part/checkpoint.pt' #put a relevant path here
 
-    labels = torch.load('Programming_Part/data.pt')
-    
+    # labels = torch.load('Programming_Part/data.pt')
+
     data = torch.load('Programming_Part/total_dest_data.pt')
 
-    val_data = data[:2], labels[:2]
-    train_data = data[2:], labels[2:]
+    # val_data = data[:2], labels[:2]
+    # train_data = data[2:], labels[2:]
 
     model = UNet(data[0].shape[-1])
-    early_stop = Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2, patience=10, PATH = 'Programming_Part/checkpoint.pt')
+    early_stop = Fit(model=model, learning_rate=0.001, n_epochs=10, batch_size=2, patience=10, PATH = 'Programming_Part/checkpoint.pt')
     
     if early_stop == True :
         model = UNet(data[0].shape[-1])
