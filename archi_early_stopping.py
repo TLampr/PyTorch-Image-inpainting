@@ -189,7 +189,7 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10, patience=10, PATH):
+def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10, patience=10, PATH = None):
     
     #early stopping :
     min_val_loss = np.Inf
