@@ -240,7 +240,7 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
             masks[masks != 0] = 1
             masks = torch.cat((masks, masks, masks), dim=1)
             """LOOPING OVER THE BATCHES"""
-            for j in range(int(N / batch_size)):
+            for j in range(int(N // batch_size)):
                 j_start = j * batch_size
                 j_end = (j + 1) * batch_size
                 inds = range(j_start, j_end)
