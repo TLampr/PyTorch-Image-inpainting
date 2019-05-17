@@ -218,8 +218,8 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
             j_start = j * batch_size
             j_end = (j + 1) * batch_size
             inds = range(j_start, j_end)
-            X = train_data[inds]
-            y = train_labels[inds]
+            X = train_data[inds][:, :3, :, :]
+            y = train_labels[inds][:, :3, :, :]
             M = masks[inds]
             X, y, M = Variable(X), Variable(y), Variable(M)
             optimizer.zero_grad()
@@ -277,23 +277,22 @@ if __name__ == '__main__':
     # list_img.append(img128)
     # list_img.append(img64)
     # list_img.append(img32)
+    
+    PATH = 'Programming_Part/checkpoint.pt' #put a relevant path here
 
     labels = torch.load('Programming_Part/data.pt')
+    
     data = torch.load('Programming_Part/total_dest_data.pt')
-    # masks = data[:, 3, :, :][:, None, :, :]
-    # masks = torch.cat((masks, masks, masks), dim=1)
-    data = data[:, :3, :, :]
-    # masks[masks != 0] = 1
-    # train_data = data, labels
-    val_data = data[:100], labels[:100]
-    train_data = data[100:], labels[100:]
+
+    val_data = data[:2], labels[:2]
+    train_data = data[2:], labels[2:]
 
     model = UNet(data[0].shape[-1])
-    Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2, patience=10, PATH)
+    early_stop = Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2, patience=10, PATH = 'Programming_Part/checkpoint.pt')
     
     if early_stop == True :
         model = UNet(data[0].shape[-1])
         model.load_state_dict(torch.load(PATH))
     model.eval()
     
-    #test  
+    #test     
