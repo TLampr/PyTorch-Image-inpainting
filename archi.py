@@ -247,21 +247,21 @@ def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch
                 optimizer.step()
                 running_loss += loss.data
                 print(loss.data)
-    train_loss.append(float(running_loss) / (N / batch_size))
-    print("train_loss", float(running_loss) / (N / batch_size))
-    if torch.cuda.is_available():
-        X_val, y_val, M_val = Variable(val_data.cuda()), Variable(val_labels.cuda()), Variable(val_masks.cuda())
-    else:
-        X_val, y_val, M_val = Variable(val_data), Variable(val_labels), Variable(val_masks)
-    val_outputs = model(X_val, M_val)
-    val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
-    validation_loss.append(val_loss)
-    print("validation_loss", float(running_loss))
-    print('epoch', epoch + 1)
-    epoch += 1
-    if epoch % 30 == 0:
-        for para_group in optimizer.param_groups:
-            para_group['lr'] = learning_rate / 10
+        train_loss.append(float(running_loss) / (N / batch_size))
+        print("train_loss", float(running_loss) / (N / batch_size))
+        if torch.cuda.is_available():
+            X_val, y_val, M_val = Variable(val_data.cuda()), Variable(val_labels.cuda()), Variable(val_masks.cuda())
+        else:
+            X_val, y_val, M_val = Variable(val_data), Variable(val_labels), Variable(val_masks)
+        val_outputs = model(X_val, M_val)
+        val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
+        validation_loss.append(val_loss)
+        print("validation_loss", float(running_loss))
+        print('epoch', epoch + 1)
+        epoch += 1
+        if epoch % 30 == 0:
+            for para_group in optimizer.param_groups:
+                para_group['lr'] = learning_rate / 10
     plt.plot(train_loss, label='train', color='b')
     plt.plot(validation_loss, label='validation')
     plt.ylabel('loss')
