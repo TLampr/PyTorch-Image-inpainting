@@ -189,7 +189,13 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10):
+def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10, patience=10, PATH):
+    
+    #early stopping :
+    min_val_loss = np.Inf
+    counter = 0
+    early_stop = False
+    
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = our_loss()
     train_data, train_labels = train_set
@@ -233,15 +239,30 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
         val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
         validation_loss.append(val_loss)
         print("validation_loss", float(running_loss))
+        
+        #early_stopping :
+        if val_loss < min_val_loss:
+            counter += 1
+            if counter >= patience:
+                early_stop = True
+                break
+        else:
+            min_val_loss = val_loss
+            torch.save(model.state_dict())
+            counter = 0 
+        #-------------------------
+        
         print('epoch', epoch + 1)
         epoch += 1
+        
     plt.plot(train_loss, label='train', color='b')
     plt.plot(validation_loss, label='validation')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend()
     plt.show()
-
+    
+    return early_stop
 
 if __name__ == '__main__':
     # img512 = torch.rand(10, 4, 512, 512)
@@ -268,4 +289,11 @@ if __name__ == '__main__':
     train_data = data[100:], labels[100:]
 
     model = UNet(data[0].shape[-1])
-    Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2)
+    Fit(model=model, train_set=train_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2, patience=10, PATH)
+    
+    if early_stop == True :
+        model = UNet(data[0].shape[-1])
+        model.load_state_dict(torch.load(PATH))
+    model.eval()
+    
+    #test  
