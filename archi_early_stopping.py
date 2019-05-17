@@ -324,7 +324,12 @@ if __name__ == '__main__':
     
     if early_stop == True :
         model = UNet(data[0].shape[-1])
-        model.load_state_dict(torch.load(PATH))
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+            model.load_state_dict(torch.load(PATH))
+            model.to(device)
+        else : 
+            model.load_state_dict(torch.load(PATH))
     model.eval()
     
     #test     
