@@ -276,14 +276,8 @@ def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_si
                 break
         else:
             min_val_loss = val_loss
-            torch.save(model.state_dict())
+            torch.save(model.state_dict(), PATH)
             counter = 0 
-            
-        if epoch == 0 :
-            torch.save(model.state_dict())
-            early_stop = True
-            break
-        
 
         #-------------------------
         
