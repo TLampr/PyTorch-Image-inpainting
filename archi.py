@@ -198,6 +198,13 @@ def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch
         model.cuda()
     # train_data, train_labels = train_set
     val_data, val_labels = val_set
+    val_masks = val_data[:, 3, :, :][:, None, :, :]
+    val_masks[val_masks != 0] = 1
+    val_masks = torch.cat((val_masks, val_masks, val_masks), dim=1)
+
+    X_val = val_data[:, :3, :, :]
+    y_val = val_labels[:, :3, :, :]
+    X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
     # N = train_data.shape[0]
     epoch = 0
     train_loss = []
@@ -242,8 +249,6 @@ def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch
                 print(loss.data)
     train_loss.append(float(running_loss) / (N / batch_size))
     print("train_loss", float(running_loss) / (N / batch_size))
-    val_masks = val_data[:, 3, :, :][:, None, :, :]
-    val_masks[val_masks != 0] = 1
     if torch.cuda.is_available():
         X_val, y_val, M_val = Variable(val_data.cuda()), Variable(val_labels.cuda()), Variable(val_masks.cuda())
     else:
