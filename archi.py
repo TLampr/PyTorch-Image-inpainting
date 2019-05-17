@@ -9,6 +9,8 @@ import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
+import glob, os
+from tqdm import tqdm
 
 
 class PartialConv2d(nn.Module):
@@ -189,52 +191,72 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set, val_set=None, learning_rate=.01, n_epochs=10, batch_size=10):
+def Fit(model, train_set, val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = our_loss()
-    train_data, train_labels = train_set
+    if torch.cuda.is_available():
+        model.cuda()
+    # train_data, train_labels = train_set
     val_data, val_labels = val_set
-    N = train_data.shape[0]
+    # N = train_data.shape[0]
     epoch = 0
     train_loss = []
     validation_loss = []
+    dir_path = "/home/anala/Programming_Part/data"
     while epoch < n_epochs:
-        running_loss = 0.0
-        """SHUFFLING DATA"""
-        train_data, train_labels = np.array(train_data), np.array(train_labels)
-        train_data, train_labels = shuffle(train_data, train_labels)
-        train_data, train_labels = torch.from_numpy(train_data), torch.from_numpy(train_labels)
-        masks = train_data[:, 3, :, :][:, None, :, :]
-        masks[masks != 0] = 1
-        masks = torch.cat((masks, masks, masks), dim=1)
-        """LOOPING OVER THE BATCHES"""
-        for j in range(int(N / batch_size)):
-            j_start = j * batch_size
-            j_end = (j + 1) * batch_size
-            inds = range(j_start, j_end)
-            X = train_data[inds]
-            y = train_labels[inds]
-            M = masks[inds]
-            X, y, M = Variable(X), Variable(y), Variable(M)
-            optimizer.zero_grad()
-            outputs = model(X, M)
-            loss = criterion(Igt=y, Iout=outputs[0], mask=M)
-            train_loss.append(loss)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.data
-            print(loss.data)
-        train_loss.append(float(running_loss) / (N / batch_size))
-        print("train_loss", float(running_loss) / (N / batch_size))
-        val_masks = val_data[:, 3, :, :][:, None, :, :]
-        val_masks[val_masks != 0] = 1
+        for file in tqdm(os.listdir(dir_path)):
+            if 'total' in file:
+                continue
+            file2 = 'total_dest_' + file
+            labels = torch.load(file2)
+            data = torch.load(file)
+            train_data, train_labels = data, labels
+            N = train_data.shape[0]
+            running_loss = 0.0
+            """SHUFFLING DATA"""
+            train_data, train_labels = np.array(train_data), np.array(train_labels)
+            train_data, train_labels = shuffle(train_data, train_labels)
+            train_data, train_labels = torch.from_numpy(train_data), torch.from_numpy(train_labels)
+            masks = train_data[:, 3, :, :][:, None, :, :]
+            masks[masks != 0] = 1
+            masks = torch.cat((masks, masks, masks), dim=1)
+            """LOOPING OVER THE BATCHES"""
+            for j in range(int(N // batch_size)):
+                j_start = j * batch_size
+                j_end = (j + 1) * batch_size
+                inds = range(j_start, j_end)
+                X = train_data[inds]
+                y = train_labels[inds]
+                M = masks[inds]
+                if torch.cuda.is_available():
+                    X, y, M = Variable(X.cuda()), Variable(y.cuda()), Variable(M.cuda())
+                else:
+                    X, y, M = Variable(X), Variable(y), Variable(M)
+                optimizer.zero_grad()
+                outputs = model(X, M)
+                loss = criterion(Igt=y, Iout=outputs[0], mask=M)
+                train_loss.append(loss)
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.data
+                print(loss.data)
+    train_loss.append(float(running_loss) / (N / batch_size))
+    print("train_loss", float(running_loss) / (N / batch_size))
+    val_masks = val_data[:, 3, :, :][:, None, :, :]
+    val_masks[val_masks != 0] = 1
+    if torch.cuda.is_available():
+        X_val, y_val, M_val = Variable(val_data.cuda()), Variable(val_labels.cuda()), Variable(val_masks.cuda())
+    else:
         X_val, y_val, M_val = Variable(val_data), Variable(val_labels), Variable(val_masks)
-        val_outputs = model(X_val, M_val)
-        val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
-        validation_loss.append(val_loss)
-        print("validation_loss", float(running_loss))
-        print('epoch', epoch + 1)
-        epoch += 1
+    val_outputs = model(X_val, M_val)
+    val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
+    validation_loss.append(val_loss)
+    print("validation_loss", float(running_loss))
+    print('epoch', epoch + 1)
+    epoch += 1
+    if epoch % 30 == 0:
+        for para_group in optimizer.param_groups:
+            para_group['lr'] = learning_rate / 10
     plt.plot(train_loss, label='train', color='b')
     plt.plot(validation_loss, label='validation')
     plt.ylabel('loss')
@@ -261,7 +283,6 @@ if __name__ == '__main__':
     data = torch.load('Programming_Part/total_dest_data.pt')
     # masks = data[:, 3, :, :][:, None, :, :]
     # masks = torch.cat((masks, masks, masks), dim=1)
-    data = data[:, :3, :, :]
     # masks[masks != 0] = 1
     # train_data = data, labels
     val_data = data[:100], labels[:100]
