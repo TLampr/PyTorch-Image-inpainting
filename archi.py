@@ -191,12 +191,21 @@ class UNet(nn.Module):
 #     return loss, optimizer
 
 
-def Fit(model, train_set=None, val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6):
+def Fit(model, test_data, val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = our_loss()
+    test_data, test_labels = test_data
+    test_masks = test_data[:, 3, :, :][:, None, :, :]
+    test_masks[test_masks != 0] = 1
+    test_masks = torch.cat((test_masks, test_masks, test_masks), dim=1)
+    X_test = test_data[:, :3, :, :]
+    y_test = test_labels[:, :3, :, :]
     if torch.cuda.is_available():
-        model.cuda()
-    # train_data, train_labels = train_set
+        model = model.cuda()
+    if torch.cuda.is_available():
+        X_test, y_test, M_test = Variable(X_test.cuda()), Variable(y_test.cuda()), Variable(test_masks.cuda())
+    else:
+        X_test, y_test, M_test = Variable(X_test), Variable(y_test), Variable(test_masks)
     val_data, val_labels = val_set
     val_masks = val_data[:, 3, :, :][:, None, :, :]
     val_masks[val_masks != 0] = 1
@@ -204,13 +213,10 @@ def Fit(model, train_set=None, val_set=None, learning_rate=.00005, n_epochs=10, 
 
     X_val = val_data[:, :3, :, :]
     y_val = val_labels[:, :3, :, :]
-    X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
-    # N = train_data.shape[0]
     epoch = 0
     train_loss = []
     validation_loss = []
     dir_path = "/home/anala/Programming_Part/data"
-    val_counter = 0
     while epoch < n_epochs:
         for file in tqdm(os.listdir(dir_path)):
             if 'total' in file:
@@ -219,20 +225,6 @@ def Fit(model, train_set=None, val_set=None, learning_rate=.00005, n_epochs=10, 
             labels = torch.load(file2)
             data = torch.load(file)
             train_data, train_labels = data, labels
-            if val_counter == 0:
-                validation = data[:100], labels[:100]
-                val_data, val_labels = validation[0], validation[1]
-                train_data, train_labels = data[100:], labels[100:]
-                val_masks = val_data[:, 3, :, :][:, None, :, :]
-                val_masks[val_masks != 0] = 1
-                val_masks = torch.cat((val_masks, val_masks, val_masks), dim=1)
-
-                X_val = val_data[:, :3, :, :]
-                y_val = val_labels[:, :3, :, :]
-                if torch.cuda.is_available():
-                    X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
-                else:
-                    X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
             N = train_data.shape[0]
             running_loss = 0.0
             """SHUFFLING DATA"""
@@ -255,7 +247,7 @@ def Fit(model, train_set=None, val_set=None, learning_rate=.00005, n_epochs=10, 
                 else:
                     X, y, M = Variable(X), Variable(y), Variable(M)
                 optimizer.zero_grad()
-                outputs = model(X, M)
+                outputs = model(X, M).cuda()
                 loss = criterion(Igt=y, Iout=outputs[0], mask=M)
                 train_loss.append(loss)
                 loss.backward()
@@ -277,6 +269,11 @@ def Fit(model, train_set=None, val_set=None, learning_rate=.00005, n_epochs=10, 
         if epoch % 30 == 0:
             for para_group in optimizer.param_groups:
                 para_group['lr'] = learning_rate / 10
+    test_outputs = model(X_test, M_test)
+    test_loss = criterion(Igt=y_test, Iout=test_outputs[0], mask=M_test)
+    torch.save(torch.FloatTensor(test_loss), "test_loss.pt")
+    torch.save(torch.FloatTensor(validation_loss), "validation_losses.pt")
+    torch.save(torch.FloatTensor(train_loss), "training_losses.pt")
     plt.plot(train_loss, label='train', color='b')
     plt.plot(validation_loss, label='validation')
     plt.ylabel('loss')
@@ -299,14 +296,18 @@ if __name__ == '__main__':
     # list_img.append(img64)
     # list_img.append(img32)
 
-    # labels = torch.load('Programming_Part/data.pt')
-    data = torch.load('Programming_Part/total_dest_data.pt')
+    labels1 = torch.load('Programming_Part/validation_and_test/data1.pt')
+    data1 = torch.load('Programming_Part/validation_and_test/total_dest_data1.pt')
+    labels2 = torch.load('Programming_Part/validation_and_test/data2.pt')
+    data2 = torch.load('Programming_Part/validation_and_test/total_dest_data2.pt')
+    labels = torch.cat((labels1,labels2), dim=0)
+    data = torch.cat((data1,data2), dim=0)
     # masks = data[:, 3, :, :][:, None, :, :]
     # masks = torch.cat((masks, masks, masks), dim=1)
     # masks[masks != 0] = 1
     # train_data = data, labels
-    # val_data = data[:100], labels[:100]
-    # train_data = data[100:], labels[100:]
+    val_data = data[:100], labels[:100]
+    test_data = data[100:], labels[100:]
 
     model = UNet(data[0].shape[-1])
-    Fit(model=model, learning_rate=0.001, n_epochs=10, batch_size=2)
+    Fit(model=model, test_data=test_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2)
