@@ -19,7 +19,7 @@ def compute_SSIM(x, y):
   #x, y windows of y_true and y_pred of common size NxN 
   k1 = 0.01
   k2 = 0.03
-  L = 1
+  L = 255
   #L the dynamic range of the pixel-values (typically this is 2^#bits_per_pixel-1)
   #L = 255 for 8-bit grayscale images
   c1 = (k1*L)**2
