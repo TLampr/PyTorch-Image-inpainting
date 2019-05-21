@@ -14,7 +14,7 @@ def l1(y_true, y_pred):
   l1 = np.mean(np.abs(y_pred - y_true), axis=(1,2,3))
   return l1
 
-def compute_MSSIM(y_true, y_pred, window_size) :
+def compute_MSSIM(y_true, y_pred, window_size = 7) :
   MSSIM = np.zeros(y_true.shape[0])
   for i in range(y_true.shape[0]):
     for j in range(y_true.shape[1]) :
