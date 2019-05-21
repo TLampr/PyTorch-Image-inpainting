@@ -283,11 +283,11 @@ def Fit(model, test_data, val_set=None, learning_rate=.00005, n_epochs=10, batch
 
 
 if __name__ == '__main__':
-    # img512 = torch.rand(10, 4, 512, 512)
-    # img256 = torch.rand(10, 4, 256, 256)
-    # img128 = torch.rand(10, 4, 128, 128)
-    # img64 = torch.rand(10, 4, 64, 64)
-    # img32 = torch.rand(10, 4, 32, 32)
+    img512 = torch.rand(10, 4, 512, 512)
+    img256 = torch.rand(10, 4, 256, 256)
+    img128 = torch.rand(10, 4, 128, 128)
+    img64 = torch.rand(10, 4, 64, 64)
+    img32 = torch.rand(10, 4, 32, 32)
     #
     # list_img = []
     # list_img.append(img512)
