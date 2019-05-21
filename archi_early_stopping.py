@@ -279,7 +279,7 @@ def Fit(model, test_set, val_set=None, learning_rate=.01, n_epochs=10, batch_siz
         val_outputs = model(X_val, M_val)
         val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
         validation_loss.append(val_loss)
-        print("validation_loss", float(running_loss))
+        print("validation_loss", float(val_loss))
 
         # save variables and losses
         if epoch % 20 == 0:
