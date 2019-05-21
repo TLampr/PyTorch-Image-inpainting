@@ -1,7 +1,8 @@
 from sklearn import metrics
 from skimage import measure
 
-import time
+import numpy as np
+import torch
 
 def PSNR(y_true, y_pred):
   MSE = np.mean(np.square(y_pred - y_true), axis = (1,2,3))
