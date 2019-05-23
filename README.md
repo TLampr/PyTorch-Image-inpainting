@@ -1,4 +1,6 @@
-# Image reconstruction
+# Image reconstruction - KTH DD2424 - Deep Learning Project
+
+Reproduction of [1].
 
 ## Download the Large-scale CelebFaces Attributes (CelebA) Dataset from their Google Drive link :
 
@@ -19,9 +21,11 @@ test.py -> call a checkpoint of the model and compute the reconstruction on a te
 ### Results after training on 1000 images for 38 epochs :
 ![picture alt](./results/results.PNG)
 
-### Comparisons with 2 techniques, Patch Match [1] and Glocal and Local discriminators [2] : 
+### Comparisons with 2 techniques, Patch Match [2] and Glocal and Local discriminators [3] : 
 ![picture alt](./results/comp.PNG)
 
-[1] Barnes, C., Shechtman, E., Finkelstein, A., Goldman, D.B.: \textit{Patchmatch: A randomized correspondence algorithm for structural image editing}. ACM Transactions on Graphics-TOG \textbf{28}(3), 24 (2009)
+[1] G. Liu, F. A. Reda, K. J. Shih, T.-C. Wang, A. Tao, and B. Catanzaro, \textit{Image Inpainting for Irregular Holes Using Partial Convolutions}, apr 2018. [Online]. Available: http://arxiv.org/abs/1804.07723
 
-[2] Iizuka, S., Simo-Serra, E., Ishikawa, H.: \textit{Globally and locally consistent image completion}. ACM Transactions on Graphics (TOG) \textbf{36}(4), 107 (2017)
+[2] Barnes, C., Shechtman, E., Finkelstein, A., Goldman, D.B.: \textit{Patchmatch: A randomized correspondence algorithm for structural image editing}. ACM Transactions on Graphics-TOG \textbf{28}(3), 24 (2009)
+
+[3] Iizuka, S., Simo-Serra, E., Ishikawa, H.: \textit{Globally and locally consistent image completion}. ACM Transactions on Graphics (TOG) \textbf{36}(4), 107 (2017)
