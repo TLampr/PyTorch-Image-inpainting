@@ -9,3 +9,5 @@
 # Google Drive: https://drive.google.com/drive/folders/0B7EVK8r0v71pWEZsZE9oNnFzTm8
 
 python3 get_drive_file.py 0B7EVK8r0v71pZjFTYXZWM3FlRnM celebA.zip
+
+![picture alt](architecture.png)
