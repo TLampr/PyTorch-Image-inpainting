@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon May 20 10:32:51 2019
-
-@author: depre
-"""
-
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
