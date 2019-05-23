@@ -26,6 +26,6 @@ test.py -> call a checkpoint of the model and compute the reconstruction on a te
 
 [1] G. Liu, F. A. Reda, K. J. Shih, T.-C. Wang, A. Tao, and B. Catanzaro, *Image Inpainting for Irregular Holes Using Partial Convolutions*, apr 2018. [Online]. Available: http://arxiv.org/abs/1804.07723
 
-[2] Barnes, C., Shechtman, E., Finkelstein, A., Goldman, D.B.: *Patchmatch: A randomized correspondence algorithm for structural image editing*. ACM Transactions on Graphics-TOG **28**(3), 24 (2009) Website : https://gfx.cs.princeton.edu/pubs/Barnes_2009_PAR/patchmatch.pdf Available : https://gfx.cs.princeton.edu/pubs/Barnes_2009_PAR/index.php
+[2] Barnes, C., Shechtman, E., Finkelstein, A., Goldman, D.B.: *Patchmatch: A randomized correspondence algorithm for structural image editing*. ACM Transactions on Graphics-TOG **28**(3), 24 (2009) Website : https://gfx.cs.princeton.edu/pubs/Barnes_2009_PAR/index.php Available : https://gfx.cs.princeton.edu/pubs/Barnes_2009_PAR/patchmatch.pdf 
 
 [3] Iizuka, S., Simo-Serra, E., Ishikawa, H.: *Globally and locally consistent image completion*. ACM Transactions on Graphics (TOG) **36**(4), 107 (2017) Available : http://iizuka.cs.tsukuba.ac.jp/projects/completion/data/completion_sig2017.pdf
