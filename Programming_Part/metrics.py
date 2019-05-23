@@ -1,5 +1,4 @@
 from skimage import measure
-
 import numpy as np
 
 def PSNR(y_true, y_pred):
