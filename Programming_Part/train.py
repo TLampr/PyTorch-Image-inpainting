@@ -1,18 +1,11 @@
 import torch
-from torch import nn
-import torch.nn.functional as F
-import numpy as np
-import torch
 import torch.optim as optim
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
-from sklearn.utils import shuffle
-import glob, os
 from tqdm import tqdm
-from torchvision import models
-import torchvision.transforms as transforms
-# import objgraph
 import gc
+
+from archi import UNet
+from loss import loss 
 
 is_cuda = torch.cuda.is_available()
 
@@ -37,25 +30,38 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
 
     X_val = val_data[:, :3, :, :]
     y_val = val_labels[:, :3, :, :]
+    
     if is_cuda:
         X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
     else:
         X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
+    
     N_val = X_val.shape[0]
     epoch = 0
     train_loss = []
     validation_loss = []
-    file2 = 'total_dest_1000_images5.pt'
-    file = '1000_images5.pt'
-    labels = torch.load(file).to('cuda')
-    data = torch.load(file2).to('cuda')
+    
+    data = torch.load('total_dest_1000_images5.pt')
+    labels = torch.load('1000_images5.pt')
+
+    if is_cuda :
+       labels.to('cuda')
+       data.to('cuda')
+        
     train_data, train_labels = data, labels
     old_val_error = 99999999
     patience_counter = 0
     val_error_history = []
+    
     while epoch < n_epochs:
         running_loss = 0.0
+        
         print("iterating over the files in the folder")
+        """
+        To use more than 1000 images : 
+        """
+            
+        
         """
         for file in tqdm(os.listdir()):
             if 'total' in file:
@@ -68,28 +74,27 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
             labels = torch.load(file).to('cuda')
             data = torch.load(file2).to('cuda')
             train_data, train_labels = data, labels
-
         """
         
 
         """SHUFFLING DATA"""
         print("shuffling data...")
-
-        r = torch.randperm(train_data.shape[0]).cuda()
+        
+        r = torch.randperm(train_data.shape[0])
+        
+        if is_cuda :
+            r.cuda()
+        
         train_data = train_data[r]
         masks = train_data[:, 3, :, :][:, None, :, :]
         X_train = train_data[:, :3, :, :]
-
 
         train_labels = train_labels[r]
         y_train = train_labels[:, :3, :, :]
 
         print("EXTRACTING THE MASKS")
         masks[masks != 0] = 1
-
-
         masks = torch.cat((masks, masks, masks), dim=1)
-
 
         if is_cuda:
             X_train, y_train, M_train = Variable(X_train.cuda()), Variable(y_train.cuda()), Variable(masks.cuda())
@@ -124,7 +129,9 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
             del y
             del M
             del outputs
-            torch.cuda.empty_cache()
+            
+            if is_cuda :
+                torch.cuda.empty_cache()
 
             gc.collect()
 
@@ -134,15 +141,19 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
         del y_train
         del M_train
 
-        torch.cuda.empty_cache()
+        if is_cuda : 
+            torch.cuda.empty_cache()
+            
         print("=" * 30)
         print("train_loss", epoch_train_loss)
         print("=" * 30)
+        
         model.eval()
-
-        torch.cuda.empty_cache()
+            
         print("EVALUATING THE VALIDATION SET")
+        
         summed_val_error = 0
+        
         for j in tqdm(range(int(N_val // batch_size))):
             j_start = j * batch_size
             j_end = (j + 1) * batch_size
@@ -154,11 +165,15 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
             val_loss = criterion(Igt=y_val_batch, Iout=val_outputs[0], mask=M_val_batch)
 
             summed_val_error += val_loss.item()
+            
             del X_val_batch
             del y_val_batch
             del M_val_batch
             del val_outputs
-            torch.cuda.empty_cache()
+            
+            if is_cuda : 
+                torch.cuda.empty_cache()
+                
         final_val_loss = float(summed_val_error) / (100.0)
         validation_loss.append((float(summed_val_error) / (100.0)))
 
@@ -183,12 +198,6 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
                     else:
                         patience_counter += 1
 
-
-            # print("SAVING THE MODEL FOR EPOCH: {}".format(epoch + 1))
-            #
-            # torch.save(model.state_dict(), 'noreg_checkpoint_last_loss{}.pt'.format(epoch))
-            # torch.save(validation_loss, 'noreg_val_last_loss{}.pt'.format(epoch))
-            # torch.save(train_loss, 'noreg_train_last_loss{}.pt'.format(epoch))
         print("="*30)
         print("validation_loss", float(final_val_loss))
         print("="*30)
@@ -203,10 +212,20 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
                         para_group['lr'] = learning_rate / 10
 
 if __name__ == '__main__':
-    labels = torch.load("../data/data14.pt").to('cuda')
-    data = torch.load("../data/total_dest_data14.pt").to('cuda')
+    
+    labels = torch.load("../data/data14.pt")
+    data = torch.load("../data/total_dest_data14.pt")
+    
+    if is_cuda :
+        labels.to('cuda')
+        data.to('cuda')
+    
     val_data = data, labels
-    del (data)
-    del (labels)
+    
+    del data
+    del labels
+    
+    if is_cuda :
+        torch.cuda.empty_cache()
 
     Fit(val_set=val_data, learning_rate=0.0002, n_epochs=100, batch_size=6, patience=5, learning_rate_decay=20)
