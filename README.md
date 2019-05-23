@@ -10,5 +10,5 @@
 
 python3 get_drive_file.py 0B7EVK8r0v71pZjFTYXZWM3FlRnM celebA.zip
 
-![picture alt](comp.PNG)
-![picture alt](results.PNG)
+![picture alt](./results/comp.PNG)
+![picture alt](./results/results.PNG)
