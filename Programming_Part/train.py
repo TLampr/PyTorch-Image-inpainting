@@ -3,6 +3,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 from tqdm import tqdm
 import gc
+import matplotlib.pyplot as plt
 
 from archi import UNet
 from loss import loss 
@@ -177,7 +178,9 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
         final_val_loss = float(summed_val_error) / (100.0)
         validation_loss.append((float(summed_val_error) / (100.0)))
 
-        """PATIENCE, IF SET TO NONE THEN ITS OFF"""
+        """
+        early stopping is patience is define
+        """
 
         if patience is not None:
             if summed_val_error <= old_val_error:
@@ -210,6 +213,8 @@ def Fit(val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6, patience 
                     print("REDUCING THE LEARNING RATE FROM: {} TO: {}".format(learning_rate, learning_rate/10))
                     for para_group in optimizer.param_groups:
                         para_group['lr'] = learning_rate / 10
+                        
+    return train_loss, validation_loss
 
 if __name__ == '__main__':
     
@@ -228,4 +233,13 @@ if __name__ == '__main__':
     if is_cuda :
         torch.cuda.empty_cache()
 
-    Fit(val_set=val_data, learning_rate=0.0002, n_epochs=100, batch_size=6, patience=5, learning_rate_decay=20)
+    train_loss, validation_loss = Fit(val_set=val_data, learning_rate=0.0002, n_epochs=100, batch_size=6, patience=5, learning_rate_decay=20)
+
+    if not is_cuda :
+        plt.plot(train_loss, label = 'training set')    
+        plt.plot(validation_loss, label = 'validation set')
+        plt.xlabel('epoch')
+        plt.ylabel('loss')
+        plt.title('evolution of the loss function during training')
+        plt.legend()
+        plt.show()
