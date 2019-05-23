@@ -1,21 +1,6 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
 import numpy as np
-import torch
-import torch.optim as optim
-from torch.autograd import Variable
-import matplotlib.pyplot as plt
-from sklearn.utils import shuffle
-import glob, os
-from tqdm import tqdm
-from torchvision import models
-import torchvision.transforms as transforms
-# import objgraph
-import gc
-
-is_cuda = torch.cuda.is_available()
-
 
 class PartialConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
@@ -98,17 +83,20 @@ class UNet(nn.Module):
         elif img_shape == 128:
             self.nb_jump = 3
         elif img_shape == 64:
-            self.nb_jump = 3
+            self.nb_jump = 2
         elif img_shape == 32:
-            self.nb_jump = 3
+            self.nb_jump = 1
         else:
             print("error in image size")
 
-        i = int(np.log2(256 / img_shape))
-
+        if img_shape < 512 :
+            i = int(np.log2(256 / img_shape))
+            self.nb_layers = 8 - i
+        else : 
+            self.nb_layers = 8
+            
         self.kernel_sizes = [7, 5, 5, 3, 3, 3, 3, 3]
 
-        self.nb_layers = 8 - i
         self.nb_channels = []
 
         size = img_shape
