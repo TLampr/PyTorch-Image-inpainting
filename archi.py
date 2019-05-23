@@ -1,21 +1,25 @@
-# squared images
-from PIL import Image
+import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
 import torch
-from lovelyLoss import loss as our_loss
 import torch.optim as optim
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
 import glob, os
 from tqdm import tqdm
+from torchvision import models
+import torchvision.transforms as transforms
+# import objgraph
+import gc
+
+is_cuda = torch.cuda.is_available()
 
 
 class PartialConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                 padding=0, dilation=1, groups=1, bias=True):
+                 padding=0, dilation=1, groups=1, bias=False, phase='encoding'):
         super(PartialConv2d, self).__init__()
 
         # this is the main convolution, which is going to be in charge of
@@ -23,7 +27,8 @@ class PartialConv2d(nn.Module):
         # between mask and input
         self.input_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                     stride, padding, dilation, groups, bias)
-        torch.nn.init.xavier_uniform_(self.input_conv.weight)
+        torch.nn.init.xavier_normal_(self.input_conv.weight)
+
 
         # it is needed to compute the convolution of the mask separately
         # in order to update its size in each level of the u-net
@@ -63,6 +68,8 @@ class PartialConv2d(nn.Module):
         new_mask = torch.ones_like(output)
         new_mask = new_mask.masked_fill_(zeros_mask, 0.0)
 
+        del image, mask, output_pre, sum_M, zeros_mask, output_bias
+
         return output, new_mask
 
 
@@ -97,7 +104,7 @@ class UNet(nn.Module):
         else:
             print("error in image size")
 
-        i = int(np.log2(512 / img_shape))
+        i = int(np.log2(256 / img_shape))
 
         self.kernel_sizes = [7, 5, 5, 3, 3, 3, 3, 3]
 
@@ -150,11 +157,8 @@ class UNet(nn.Module):
 
         self.decoding_list.append(
             nn.Sequential(
-                PartialConv2d(self.nb_channels[0] + 3, 3, kernel_size=3, stride=1, padding=1))
+                PartialConv2d(self.nb_channels[0] + 3, 3, kernel_size=3, stride=1, padding=1, bias=True))
         )
-        # no batch norm or relu here -> output is the reconstructed image
-        # print(self.encoding_list)
-        # print(self.decoding_list)
 
     def forward(self, x, mask):
         output_feature = []
@@ -181,133 +185,5 @@ class UNet(nn.Module):
             if j < self.nb_layers - 1:
                 image = self.decoding_list[j][1](out[0])
                 out = image, out[1]
-
+        del output_feature, image, nearestUpSample_image, nearestUpSample_mask, concat_image, concat_mask
         return out
-
-
-# def LossAndOptimizer(learning_rate, model, real_image, output, mask):
-#     loss = our_loss(img=real_image, output=output, mask=mask)
-#     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-#     return loss, optimizer
-
-
-def Fit(model, test_data, val_set=None, learning_rate=.00005, n_epochs=10, batch_size=6):
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = our_loss()
-    test_data, test_labels = test_data
-    test_masks = test_data[:, 3, :, :][:, None, :, :]
-    test_masks[test_masks != 0] = 1
-    test_masks = torch.cat((test_masks, test_masks, test_masks), dim=1)
-    X_test = test_data[:, :3, :, :]
-    y_test = test_labels[:, :3, :, :]
-    if torch.cuda.is_available():
-        model = model.cuda()
-    if torch.cuda.is_available():
-        X_test, y_test, M_test = Variable(X_test.cuda()), Variable(y_test.cuda()), Variable(test_masks.cuda())
-    else:
-        X_test, y_test, M_test = Variable(X_test), Variable(y_test), Variable(test_masks)
-    val_data, val_labels = val_set
-    val_masks = val_data[:, 3, :, :][:, None, :, :]
-    val_masks[val_masks != 0] = 1
-    val_masks = torch.cat((val_masks, val_masks, val_masks), dim=1)
-
-    X_val = val_data[:, :3, :, :]
-    y_val = val_labels[:, :3, :, :]
-    epoch = 0
-    train_loss = []
-    validation_loss = []
-    dir_path = "/home/anala/Programming_Part/data"
-    while epoch < n_epochs:
-        for file in tqdm(os.listdir(dir_path)):
-            if 'total' in file:
-                continue
-            file2 = 'total_dest_' + file
-            labels = torch.load(file2)
-            data = torch.load(file)
-            train_data, train_labels = data, labels
-            N = train_data.shape[0]
-            running_loss = 0.0
-            """SHUFFLING DATA"""
-            train_data, train_labels = np.array(train_data), np.array(train_labels)
-            train_data, train_labels = shuffle(train_data, train_labels)
-            train_data, train_labels = torch.from_numpy(train_data), torch.from_numpy(train_labels)
-            masks = train_data[:, 3, :, :][:, None, :, :]
-            masks[masks != 0] = 1
-            masks = torch.cat((masks, masks, masks), dim=1)
-            """LOOPING OVER THE BATCHES"""
-            for j in range(int(N // batch_size)):
-                j_start = j * batch_size
-                j_end = (j + 1) * batch_size
-                inds = range(j_start, j_end)
-                X = train_data[inds]
-                y = train_labels[inds]
-                M = masks[inds]
-                if torch.cuda.is_available():
-                    X, y, M = Variable(X.cuda()), Variable(y.cuda()), Variable(M.cuda())
-                else:
-                    X, y, M = Variable(X), Variable(y), Variable(M)
-                optimizer.zero_grad()
-                outputs = model(X, M).cuda()
-                loss = criterion(Igt=y, Iout=outputs[0], mask=M)
-                train_loss.append(loss)
-                loss.backward()
-                optimizer.step()
-                running_loss += loss.data
-                print(loss.data)
-        train_loss.append(float(running_loss) / (N / batch_size))
-        print("train_loss", float(running_loss) / (N / batch_size))
-        if torch.cuda.is_available():
-            X_val, y_val, M_val = Variable(X_val.cuda()), Variable(y_val.cuda()), Variable(val_masks.cuda())
-        else:
-            X_val, y_val, M_val = Variable(X_val), Variable(y_val), Variable(val_masks)
-        val_outputs = model(X_val, M_val)
-        val_loss = criterion(Igt=y_val, Iout=val_outputs[0], mask=M_val)
-        validation_loss.append(val_loss)
-        print("validation_loss", float(val_loss))
-        print('epoch', epoch + 1)
-        epoch += 1
-        if epoch % 30 == 0:
-            for para_group in optimizer.param_groups:
-                para_group['lr'] = learning_rate / 10
-    test_outputs = model(X_test, M_test)
-    test_loss = criterion(Igt=y_test, Iout=test_outputs[0], mask=M_test)
-    torch.save(torch.FloatTensor(test_loss), "test_loss.pt")
-    torch.save(torch.FloatTensor(validation_loss), "validation_losses.pt")
-    torch.save(torch.FloatTensor(train_loss), "training_losses.pt")
-    plt.plot(train_loss, label='train', color='b')
-    plt.plot(validation_loss, label='validation')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend()
-    plt.show()
-
-
-if __name__ == '__main__':
-    img512 = torch.rand(10, 4, 512, 512)
-    img256 = torch.rand(10, 4, 256, 256)
-    img128 = torch.rand(10, 4, 128, 128)
-    img64 = torch.rand(10, 4, 64, 64)
-    img32 = torch.rand(10, 4, 32, 32)
-    #
-    # list_img = []
-    # list_img.append(img512)
-    # list_img.append(img256)
-    # list_img.append(img128)
-    # list_img.append(img64)
-    # list_img.append(img32)
-
-    labels1 = torch.load('Programming_Part/validation_and_test/data1.pt')
-    data1 = torch.load('Programming_Part/validation_and_test/total_dest_data1.pt')
-    labels2 = torch.load('Programming_Part/validation_and_test/data2.pt')
-    data2 = torch.load('Programming_Part/validation_and_test/total_dest_data2.pt')
-    labels = torch.cat((labels1,labels2), dim=0)
-    data = torch.cat((data1,data2), dim=0)
-    # masks = data[:, 3, :, :][:, None, :, :]
-    # masks = torch.cat((masks, masks, masks), dim=1)
-    # masks[masks != 0] = 1
-    # train_data = data, labels
-    val_data = data[:100], labels[:100]
-    test_data = data[100:], labels[100:]
-
-    model = UNet(data[0].shape[-1])
-    Fit(model=model, test_data=test_data, val_set=val_data, learning_rate=0.001, n_epochs=10, batch_size=2)
