@@ -6,27 +6,27 @@ class PartialConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=False, phase='encoding'):
         super(PartialConv2d, self).__init__()
-
-        # this is the main convolution, which is going to be in charge of
-        # getting the 2D convolution of the element-wise multiplication
-        # between mask and input
+        """
+        this is the main convolution, which is going to be in charge of
+        getting the 2D convolution of the element-wise multiplication
+        between mask and input
+        """
         self.input_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                     stride, padding, dilation, groups, bias)
         torch.nn.init.xavier_normal_(self.input_conv.weight)
 
-
-        # it is needed to compute the convolution of the mask separately
-        # in order to update its size in each level of the u-net
-
+        """
+        it is needed to compute the convolution of the mask separately
+        in order to update its size in each level of the u-net
+        """
+        
         self.mask_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
                                    stride, padding, dilation, groups, False)
         torch.nn.init.constant_(self.mask_conv.weight, 1.0)
 
-        # mask is not updated
         for param in self.mask_conv.parameters():
             param.requires_grad = False
 
-        # conv is updated
         for param in self.input_conv.parameters():
             param.requires_grad = True
 
@@ -62,13 +62,8 @@ class UNet(nn.Module):
     def __init__(self, img_shape):
         super(UNet, self).__init__()
 
-        # Todo : nb_jump = get_params()
         self.get_params(img_shape)
-
-        # ENCODING :
         self.encoding()
-
-        # DECODING :
         self.decoding()
 
     def get_params(self, img_shape):
@@ -83,9 +78,9 @@ class UNet(nn.Module):
         elif img_shape == 128:
             self.nb_jump = 3
         elif img_shape == 64:
-            self.nb_jump = 2
+            self.nb_jump = 3
         elif img_shape == 32:
-            self.nb_jump = 1
+            self.nb_jump = 2
         else:
             print("error in image size")
 
@@ -100,6 +95,7 @@ class UNet(nn.Module):
         self.nb_channels = []
 
         size = img_shape
+        
         for j in range(self.nb_jump):
             size = int(size / 2)
             self.nb_channels.insert(0, size)
@@ -145,7 +141,8 @@ class UNet(nn.Module):
 
         self.decoding_list.append(
             nn.Sequential(
-                PartialConv2d(self.nb_channels[0] + 3, 3, kernel_size=3, stride=1, padding=1, bias=True))
+                PartialConv2d(self.nb_channels[0] + 3, 3, kernel_size=3, stride=1, padding=1, bias=True)
+            )
         )
 
     def forward(self, x, mask):
@@ -157,8 +154,6 @@ class UNet(nn.Module):
             image = self.encoding_list[j][1](out[0])
             out = image, out[1]
             output_feature.append(out)
-
-        # torch.cat((first_tensor, second_tensor), dimension)
 
         for j in range(self.nb_layers):
             nearestUpSample_image = nn.UpsamplingNearest2d(scale_factor=2)(out[0])
