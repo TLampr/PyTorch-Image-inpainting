@@ -2,8 +2,7 @@
 
 #!/bin/bash
 #
-# Download the Large-scale CelebFaces Attributes (CelebA) Dataset
-# from their Google Drive link.
+# Download the Large-scale CelebFaces Attributes (CelebA) Dataset from their Google Drive link.
 #
 # CelebA: http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
 #
